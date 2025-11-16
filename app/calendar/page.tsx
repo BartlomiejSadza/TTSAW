@@ -20,13 +20,9 @@ interface CalendarEvent {
 export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'week' | 'month'>('week');
+  const [view] = useState<'week' | 'month'>('week');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [currentDate]);
 
   const fetchEvents = async () => {
     try {
@@ -44,6 +40,11 @@ export default function CalendarPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));

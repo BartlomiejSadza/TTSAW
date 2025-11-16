@@ -21,6 +21,7 @@ export default function RoomsPage() {
 
   useEffect(() => {
     filterRooms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rooms, search, buildingFilter, minCapacity]);
 
   const fetchRooms = async () => {

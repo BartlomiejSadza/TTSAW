@@ -51,10 +51,6 @@ export default function AdminPage() {
     description: '',
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -74,6 +70,11 @@ export default function AdminPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const addRoom = async (e: React.FormEvent) => {
     e.preventDefault();

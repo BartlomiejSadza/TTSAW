@@ -1,21 +1,33 @@
-import initSqlJs, { Database } from 'sql.js';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
+// Import sql.js types but use dynamic import for initialization
+import type { Database as SqlJsDatabase } from 'sql.js';
+
 const DB_PATH = join(process.cwd(), 'dev.db');
 
-let db: Database | null = null;
+let db: SqlJsDatabase | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let SQL: any = null;
 
 async function initSQL() {
   if (!SQL) {
-    SQL = await initSqlJs();
+    // Dynamic require to avoid TypeScript issues with sql.js initialization options
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const initSqlJs = require('sql.js');
+    SQL = await initSqlJs({
+      locateFile: (file: string) => {
+        if (file.endsWith('.wasm')) {
+          return join(process.cwd(), 'node_modules', 'sql.js', 'dist', file);
+        }
+        return file;
+      }
+    });
   }
   return SQL;
 }
 
-export async function getDb(): Promise<Database> {
+export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
 
   const SqlJs = await initSQL();
@@ -33,7 +45,7 @@ export async function getDb(): Promise<Database> {
   return db!;
 }
 
-function initializeSchema(database: Database) {
+function initializeSchema(database: SqlJsDatabase) {
   database.run(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
