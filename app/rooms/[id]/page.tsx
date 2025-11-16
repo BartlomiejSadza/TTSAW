@@ -24,10 +24,6 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchRoom();
-  }, [id]);
-
   const fetchRoom = async () => {
     try {
       const response = await fetch(`/api/rooms/${id}`);
@@ -41,6 +37,11 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRoom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +72,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         setReservationData({ title: '', date: '', startTime: '', endTime: '' });
         fetchRoom();
       }
-    } catch (err) {
+    } catch {
       setError('Wystąpił błąd podczas rezerwacji');
     } finally {
       setIsSubmitting(false);

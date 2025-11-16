@@ -48,19 +48,40 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const db = await getDb();
 
-    db.run('DELETE FROM reservations WHERE id = ?', [id]);
+    // Get reservation to check ownership
+    const result = db.exec('SELECT * FROM reservations WHERE id = ?', [id]);
+    if (result.length === 0 || result[0].values.length === 0) {
+      return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
+    }
+
+    const reservation = result[0].values[0];
+    const reservationUserId = reservation[2] as string;
+
+    // Check permission - user can cancel own reservation, admin can delete any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (reservationUserId !== session.user.id && (session.user as any).role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // For regular users, change status to CANCELLED instead of deleting
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((session.user as any).role === 'ADMIN') {
+      db.run('DELETE FROM reservations WHERE id = ?', [id]);
+    } else {
+      db.run('UPDATE reservations SET status = ? WHERE id = ?', ['CANCELLED', id]);
+    }
     saveDb();
 
-    return NextResponse.json({ message: 'Reservation deleted' });
+    return NextResponse.json({ message: 'Reservation cancelled' });
   } catch (error) {
     console.error('Delete reservation error:', error);
-    return NextResponse.json({ error: 'Failed to delete reservation' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to cancel reservation' }, { status: 500 });
   }
 }

@@ -21,7 +21,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,11 +41,13 @@ export default function DashboardPage() {
     }
   };
 
+  const userName = status === 'loading' ? '...' : (session?.user?.name || 'Użytkowniku');
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          Witaj, {session?.user?.name}!
+          Witaj, {userName}!
         </h1>
         <p className="text-gray-600 mt-1">
           Zarządzaj rezerwacjami sal w systemie SmartOffice

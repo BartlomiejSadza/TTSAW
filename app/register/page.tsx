@@ -41,7 +41,7 @@ export default function RegisterPage() {
       } else {
         router.push('/login?registered=true');
       }
-    } catch (err) {
+    } catch {
       setError('Wystąpił błąd podczas rejestracji');
     } finally {
       setIsLoading(false);
