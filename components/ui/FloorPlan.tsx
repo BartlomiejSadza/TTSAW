@@ -12,8 +12,10 @@ interface FloorPlanProps {
 export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps) {
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
 
-  // Filter rooms for this floor
-  const floorRooms = rooms.filter((room) => room.floor === floor);
+  // Filter and sort rooms for this floor
+  const floorRooms = rooms
+    .filter((room) => room.floor === floor)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Generate horseshoe layout positions for 10 rooms
   // Horseshoe shape: 3 rooms on left, 4 rooms on top, 3 rooms on right
@@ -38,6 +40,18 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
 
   const positions = getHorseshoePositions();
 
+  // Check if there are any rooms on this floor
+  if (floorRooms.length === 0) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900">Piętro {floor}</h2>
+        <div className="relative w-full h-[450px] bg-white rounded-lg border-2 border-gray-300 shadow-inner flex items-center justify-center">
+          <p className="text-gray-400 text-lg">Brak sal na tym piętrze</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
       <h2 className="text-xl font-semibold mb-4 text-gray-900">Piętro {floor}</h2>
@@ -52,6 +66,11 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
         {floorRooms.map((room, index) => {
           const position = positions[index] || { x: 0, y: 0 };
           const isHovered = hoveredRoom === room.id;
+
+          // Warning if more than 10 rooms
+          if (index >= positions.length) {
+            console.warn(`Room ${room.name} on floor ${floor} has no position defined (index ${index})`);
+          }
 
           return (
             <button
