@@ -25,10 +25,17 @@ export async function PATCH(
 
     const reservation = result[0].values[0];
     const reservationUserId = reservation[2] as string;
+    const reservationRoomId = reservation[1] as string;
 
     // Check permission
     if (reservationUserId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Check if the room still exists
+    const roomExists = db.exec('SELECT id FROM rooms WHERE id = ?', [reservationRoomId]);
+    if (roomExists.length === 0 || roomExists[0].values.length === 0) {
+      return NextResponse.json({ error: 'Sala dla tej rezerwacji nie istnieje' }, { status: 404 });
     }
 
     // Update status
@@ -65,14 +72,12 @@ export async function DELETE(
     const reservationUserId = reservation[2] as string;
 
     // Check permission - user can cancel own reservation, admin can delete any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (reservationUserId !== session.user.id && (session.user as any).role !== 'ADMIN') {
+    if (reservationUserId !== session.user.id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // For regular users, change status to CANCELLED instead of deleting
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((session.user as any).role === 'ADMIN') {
+    if (session.user.role === 'ADMIN') {
       db.run('DELETE FROM reservations WHERE id = ?', [id]);
     } else {
       db.run('UPDATE reservations SET status = ? WHERE id = ?', ['CANCELLED', id]);

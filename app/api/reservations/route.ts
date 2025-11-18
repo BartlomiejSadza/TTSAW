@@ -13,9 +13,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || session.user.id;
     const all = searchParams.get('all') === 'true';
+    const limit = parseInt(searchParams.get('limit') || '100', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     let query: string;
-    let params: string[];
+    let params: (string | number)[];
 
     if (all && session.user.role === 'ADMIN') {
       query = `
@@ -24,8 +26,9 @@ export async function GET(request: NextRequest) {
         JOIN rooms rm ON r.roomId = rm.id
         JOIN users u ON r.userId = u.id
         ORDER BY r.startTime DESC
+        LIMIT ? OFFSET ?
       `;
-      params = [];
+      params = [limit, offset];
     } else {
       query = `
         SELECT r.*, rm.name as roomName, rm.building, u.name as userName, u.email as userEmail
@@ -34,8 +37,9 @@ export async function GET(request: NextRequest) {
         JOIN users u ON r.userId = u.id
         WHERE r.userId = ?
         ORDER BY r.startTime DESC
+        LIMIT ? OFFSET ?
       `;
-      params = [userId];
+      params = [userId, limit, offset];
     }
 
     const result = db.exec(query, params);
@@ -83,6 +87,11 @@ export async function POST(request: NextRequest) {
 
     if (!roomId || !title || !startTime || !endTime) {
       return NextResponse.json({ error: 'Wszystkie pola są wymagane' }, { status: 400 });
+    }
+
+    // Validate max length for title
+    if (title.length > 200) {
+      return NextResponse.json({ error: 'Tytuł nie może przekraczać 200 znaków' }, { status: 400 });
     }
 
     const start = new Date(startTime);

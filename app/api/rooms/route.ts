@@ -81,6 +81,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate max length
+    if (name.length > 100) {
+      return NextResponse.json(
+        { error: 'Room name cannot exceed 100 characters' },
+        { status: 400 }
+      );
+    }
+
+    if (description && description.length > 500) {
+      return NextResponse.json(
+        { error: 'Description cannot exceed 500 characters' },
+        { status: 400 }
+      );
+    }
+
     const db = await getDb();
     const roomId = generateId();
 

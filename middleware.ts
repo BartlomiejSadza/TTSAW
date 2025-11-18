@@ -18,6 +18,14 @@ export function middleware(request: NextRequest) {
                        request.cookies.get('__Secure-authjs.session-token');
 
   if (!sessionToken) {
+    // For API routes, return JSON error instead of redirect
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);

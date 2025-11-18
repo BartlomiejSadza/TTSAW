@@ -13,6 +13,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Nieprawidłowy format email' },
+        { status: 400 }
+      );
+    }
+
+    // Validate max length
+    if (name.length > 100) {
+      return NextResponse.json(
+        { error: 'Imię nie może przekraczać 100 znaków' },
+        { status: 400 }
+      );
+    }
+
     if (password.length < 6) {
       return NextResponse.json(
         { error: 'Hasło musi mieć co najmniej 6 znaków' },
