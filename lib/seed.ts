@@ -1,48 +1,38 @@
 import { getDb, saveDb, generateId } from './db';
 import bcrypt from 'bcrypt';
 
-const rooms = [
-  {
-    name: 'A101',
-    building: 'A',
-    floor: 1,
-    capacity: 30,
-    equipment: ['projektor', 'tablica'],
-    description: 'Sala wykładowa z projektorem',
-  },
-  {
-    name: 'A102',
-    building: 'A',
-    floor: 1,
-    capacity: 20,
-    equipment: ['projektor', 'komputery'],
-    description: 'Sala komputerowa',
-  },
-  {
-    name: 'B201',
-    building: 'B',
-    floor: 2,
-    capacity: 50,
-    equipment: ['projektor', 'tablica', 'mikrofon'],
-    description: 'Duża sala konferencyjna',
-  },
-  {
-    name: 'B202',
-    building: 'B',
-    floor: 2,
-    capacity: 15,
-    equipment: ['tablica'],
-    description: 'Mała sala seminaryjna',
-  },
-  {
-    name: 'C301',
-    building: 'C',
-    floor: 3,
-    capacity: 100,
-    equipment: ['projektor', 'mikrofon', 'nagłośnienie'],
-    description: 'Aula główna',
-  },
-];
+// Generate 40 rooms (4 floors × 10 rooms) in horseshoe layout
+const generateRooms = () => {
+  const rooms = [];
+  const equipmentOptions = [
+    ['projektor', 'tablica'],
+    ['projektor', 'tablica', 'komputery'],
+    ['tablica', 'mikrofon'],
+    ['projektor', 'mikrofon', 'nagłośnienie'],
+    ['projektor', 'tablica', 'klimatyzacja'],
+    ['komputery', 'tablica'],
+  ];
+
+  for (let floor = 1; floor <= 4; floor++) {
+    for (let roomNum = 1; roomNum <= 10; roomNum++) {
+      const capacity = 10 + Math.floor(Math.random() * 40); // 10-50 osób
+      const equipment = equipmentOptions[Math.floor(Math.random() * equipmentOptions.length)];
+
+      rooms.push({
+        name: `${floor}${roomNum.toString().padStart(2, '0')}`,
+        building: 'A',
+        floor: floor,
+        capacity: capacity,
+        equipment: equipment,
+        description: `Sala ${floor}${roomNum.toString().padStart(2, '0')} - ${capacity} miejsc`,
+      });
+    }
+  }
+
+  return rooms;
+};
+
+const rooms = generateRooms();
 
 const users = [
   {
@@ -79,7 +69,7 @@ export async function seed() {
   // Insert rooms
   for (const room of rooms) {
     db.run(
-      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description, positionX, positionY) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         generateId(),
         room.name,
@@ -88,6 +78,8 @@ export async function seed() {
         room.capacity,
         JSON.stringify(room.equipment),
         room.description,
+        null, // positionX - calculated by FloorPlan component
+        null, // positionY - calculated by FloorPlan component
       ]
     );
   }

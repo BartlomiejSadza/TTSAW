@@ -64,6 +64,8 @@ function initializeSchema(database: SqlJsDatabase) {
       capacity INTEGER NOT NULL,
       equipment TEXT NOT NULL,
       description TEXT,
+      positionX INTEGER,
+      positionY INTEGER,
       createdAt TEXT DEFAULT (datetime('now'))
     );
 

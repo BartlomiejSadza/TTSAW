@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddRoom, setShowAddRoom] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [newRoom, setNewRoom] = useState({
     name: '',
     building: '',
@@ -49,6 +50,12 @@ export default function AdminPage() {
     capacity: 20,
     equipment: '',
     description: '',
+  });
+  const [newUser, setNewUser] = useState({
+    email: '',
+    name: '',
+    password: '',
+    role: 'USER',
   });
 
   const fetchData = async () => {
@@ -95,6 +102,29 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Failed to add room:', error);
+    }
+  };
+
+  const addUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+
+      if (response.ok) {
+        setShowAddUser(false);
+        setNewUser({ email: '', name: '', password: '', role: 'USER' });
+        fetchData();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to add user');
+      }
+    } catch (error) {
+      console.error('Failed to add user:', error);
+      alert('Failed to add user');
     }
   };
 
@@ -243,6 +273,10 @@ export default function AdminPage() {
 
           {activeTab === 'users' && (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => setShowAddUser(true)}>Dodaj użytkownika</Button>
+              </div>
+
               {users.map((user) => (
                 <Card key={user.id}>
                   <div className="flex items-center justify-between">
@@ -316,6 +350,60 @@ export default function AdminPage() {
               />
               <div className="flex gap-3">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowAddRoom(false)}>
+                  Anuluj
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Dodaj
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {showAddUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Dodaj nowego użytkownika</h2>
+            <form onSubmit={addUser} className="space-y-4">
+              <Input
+                label="Email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                placeholder="email@example.com"
+                required
+              />
+              <Input
+                label="Imię i nazwisko"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                placeholder="Jan Kowalski"
+                required
+              />
+              <Input
+                label="Hasło"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                placeholder="Minimum 6 znaków"
+                required
+                minLength={6}
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rola</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="USER">Użytkownik</option>
+                  <option value="ADMIN">Administrator</option>
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowAddUser(false)}>
                   Anuluj
                 </Button>
                 <Button type="submit" className="flex-1">

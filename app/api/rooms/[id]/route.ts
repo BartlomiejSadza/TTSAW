@@ -25,7 +25,9 @@ export async function GET(
       capacity: row[4] as number,
       equipment: JSON.parse(row[5] as string),
       description: row[6] as string | null,
-      createdAt: row[7] as string,
+      positionX: row[7] as number | null,
+      positionY: row[8] as number | null,
+      createdAt: row[9] as string,
     };
 
     // Get upcoming reservations for this room

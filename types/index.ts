@@ -18,6 +18,8 @@ export interface Room {
   capacity: number;
   equipment: string[];
   description: string | null;
+  positionX?: number | null;
+  positionY?: number | null;
   createdAt: string;
 }
 

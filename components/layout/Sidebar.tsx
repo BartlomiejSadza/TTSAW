@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
   { href: '/rooms', label: 'Sale', icon: '🏫' },
+  { href: '/floor-plan', label: 'Plan pięter', icon: '🏢' },
   { href: '/reservations', label: 'Moje rezerwacje', icon: '📅' },
   { href: '/calendar', label: 'Kalendarz', icon: '📆' },
 ];

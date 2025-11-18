@@ -46,7 +46,9 @@ export async function GET(request: NextRequest) {
       capacity: row[4] as number,
       equipment: JSON.parse(row[5] as string),
       description: row[6] as string | null,
-      createdAt: row[7] as string,
+      positionX: row[7] as number | null,
+      positionY: row[8] as number | null,
+      createdAt: row[9] as string,
     }));
 
     return NextResponse.json(rooms);
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, building, floor, capacity, equipment, description } = await request.json();
+    const { name, building, floor, capacity, equipment, description, positionX, positionY } = await request.json();
 
     if (!name || !building || floor === undefined || !capacity) {
       return NextResponse.json(
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest) {
     const roomId = generateId();
 
     db.run(
-      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [roomId, name, building, floor, capacity, JSON.stringify(equipment || []), description || null]
+      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description, positionX, positionY) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [roomId, name, building, floor, capacity, JSON.stringify(equipment || []), description || null, positionX || null, positionY || null]
     );
 
     saveDb();
