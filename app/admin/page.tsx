@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import toast from 'react-hot-toast';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -98,15 +99,27 @@ export default function AdminPage() {
       if (response.ok) {
         setShowAddRoom(false);
         setNewRoom({ name: '', building: '', floor: 1, capacity: 20, equipment: '', description: '' });
+        toast.success('Sala została dodana pomyślnie!');
         fetchData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Nie udało się dodać sali');
       }
     } catch (error) {
       console.error('Failed to add room:', error);
+      toast.error('Błąd podczas dodawania sali');
     }
   };
 
   const addUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Walidacja hasła
+    if (newUser.password.length < 6) {
+      toast.error('Hasło musi mieć minimum 6 znaków');
+      return;
+    }
+
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -117,14 +130,15 @@ export default function AdminPage() {
       if (response.ok) {
         setShowAddUser(false);
         setNewUser({ email: '', name: '', password: '', role: 'USER' });
+        toast.success('Użytkownik został dodany pomyślnie!');
         fetchData();
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to add user');
+        toast.error(error.error || 'Nie udało się dodać użytkownika');
       }
     } catch (error) {
       console.error('Failed to add user:', error);
-      alert('Failed to add user');
+      toast.error('Błąd podczas dodawania użytkownika');
     }
   };
 

@@ -1,36 +1,317 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartOffice - System Rezerwacji Sal
 
-## Getting Started
+SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i wykładowych z interaktywnym planem pięter w układzie podkowy.
 
-First, run the development server:
+## 🚀 Funkcjonalności
+
+### Dla użytkowników:
+- 📅 **Przeglądanie dostępnych sal** - lista wszystkich sal z filtrowaniem
+- 🏢 **Interaktywny plan pięter** - wizualna reprezentacja sal w układzie podkowy (4 piętra × 10 sal)
+- 📝 **Rezerwacja sal** - prosta rezerwacja z wyborem daty i godziny
+- 📊 **Zarządzanie rezerwacjami** - podgląd własnych rezerwacji (nadchodzących i przeszłych)
+- 🗓️ **Kalendarz** - widok kalendarza rezerwacji
+
+### Dla administratorów:
+- 👥 **Zarządzanie użytkownikami** - tworzenie kont użytkowników i administratorów
+- 🏫 **Zarządzanie salami** - dodawanie i edycja sal
+- ✅ **Zatwierdzanie rezerwacji** - potwierdzanie lub odrzucanie rezerwacji
+- 📈 **Przegląd wszystkich rezerwacji** - widok wszystkich rezerwacji w systemie
+
+## 🛠️ Technologie
+
+- **Frontend**: Next.js 16.0.1 (App Router), React 19.2.0, TypeScript
+- **Backend**: Next.js API Routes
+- **Baza danych**: SQLite z sql.js (plik dev.db)
+- **Autentykacja**: NextAuth.js 5.0-beta.30
+- **Stylowanie**: Tailwind CSS 4
+- **Walidacja**: Bcrypt dla haseł
+- **Powiadomienia**: react-hot-toast
+
+## 📋 Wymagania
+
+- **Node.js**: wersja 18.x lub nowsza
+- **npm**: wersja 8.x lub nowsza
+- **System operacyjny**: Windows, macOS lub Linux
+
+## 🔧 Instalacja
+
+### 1. Klonowanie repozytorium
+
+```bash
+git clone https://github.com/BartlomiejSadza/TTSAW.git
+cd TTSAW
+```
+
+### 2. Instalacja zależności
+
+```bash
+npm install
+```
+
+### 3. Inicjalizacja bazy danych
+
+Baza danych inicjalizuje się automatycznie przy pierwszym uruchomieniu. Możesz również ręcznie zaseedować dane:
+
+```bash
+curl -X POST http://localhost:3000/api/seed
+```
+
+## ▶️ Uruchomienie
+
+### Tryb deweloperski
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aplikacja będzie dostępna pod adresem: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Tryb produkcyjny
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 👤 Dane logowania (po seedowaniu)
 
-To learn more about Next.js, take a look at the following resources:
+### Administrator:
+- **Email**: admin@wydzial.pl
+- **Hasło**: admin123
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Użytkownik testowy:
+- **Email**: student@wydzial.pl
+- **Hasło**: student123
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📁 Struktura projektu
 
-## Deploy on Vercel
+```
+TTSAW/
+├── app/                        # Next.js App Router
+│   ├── admin/                 # Panel administratora
+│   ├── api/                   # API endpoints
+│   │   ├── auth/             # Autentykacja NextAuth
+│   │   ├── users/            # Zarządzanie użytkownikami
+│   │   ├── rooms/            # Zarządzanie salami
+│   │   ├── reservations/     # Zarządzanie rezerwacjami
+│   │   └── seed/             # Inicjalizacja danych
+│   ├── dashboard/            # Strona główna po zalogowaniu
+│   ├── floor-plan/           # Interaktywny plan pięter
+│   ├── rooms/                # Przeglądanie i rezerwacja sal
+│   ├── reservations/         # Zarządzanie rezerwacjami użytkownika
+│   ├── calendar/             # Kalendarz rezerwacji
+│   ├── login/                # Strona logowania
+│   └── register/             # Rejestracja nowych użytkowników
+├── components/
+│   ├── layout/               # Komponenty layoutu (Navbar, Sidebar)
+│   └── ui/                   # Komponenty UI (Button, Card, Input, FloorPlan)
+├── lib/
+│   ├── auth.ts              # Konfiguracja NextAuth
+│   ├── db.ts                # Połączenie z bazą danych (sql.js)
+│   ├── seed.ts              # Dane testowe
+│   └── utils.ts             # Funkcje pomocnicze
+├── prisma/
+│   └── schema.prisma        # Schema bazy danych
+├── types/
+│   └── index.ts             # Definicje typów TypeScript
+├── dev.db                   # Plik bazy danych SQLite
+└── package.json
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🗄️ Model danych
+
+### Users (Użytkownicy)
+- `id`: Unikalny identyfikator (CUID)
+- `email`: Email (unikalny)
+- `name`: Imię i nazwisko
+- `password`: Zahashowane hasło (bcrypt)
+- `role`: Rola (USER | ADMIN)
+- `createdAt`: Data utworzenia
+
+### Rooms (Sale)
+- `id`: Unikalny identyfikator (CUID)
+- `name`: Nazwa sali (np. "101", "202")
+- `building`: Budynek (np. "A")
+- `floor`: Numer piętra (1-4)
+- `capacity`: Pojemność (liczba miejsc)
+- `equipment`: Wyposażenie (JSON array)
+- `description`: Opis sali
+- `positionX`, `positionY`: Pozycja na planie (opcjonalne)
+- `createdAt`: Data utworzenia
+
+### Reservations (Rezerwacje)
+- `id`: Unikalny identyfikator (CUID)
+- `roomId`: ID sali
+- `userId`: ID użytkownika
+- `title`: Tytuł rezerwacji
+- `startTime`: Data i godzina rozpoczęcia
+- `endTime`: Data i godzina zakończenia
+- `status`: Status (PENDING | CONFIRMED | CANCELLED)
+- `createdAt`: Data utworzenia
+
+## 🎨 Plan pięter
+
+System zawiera interaktywną wizualizację planu pięter w kształcie podkowy:
+
+### Układ budynku:
+```
+    [ ][ ][ ][ ]     <- 4 sale na górze
+   [ ]           [ ]  <- Lewy i prawy bok
+   [ ]           [ ]
+   [ ]           [ ]  <- 3 sale po każdej stronie
+        [Dziedziniec]
+```
+
+### Charakterystyka:
+- **4 piętra** (1, 2, 3, 4)
+- **10 sal na każdym piętrze**
+- **Razem 40 sal** w systemie
+- **Układ podkowy** z dziedzińcem w centrum
+- **Interaktywne pokoje** - kliknięcie przekierowuje do rezerwacji
+- **Efekt hover** - niebieskie podświetlenie przy najechaniu
+
+## 🔐 Bezpieczeństwo
+
+### Zaimplementowane zabezpieczenia:
+- ✅ **Hashowanie haseł** - bcrypt z 10 rund saltingu
+- ✅ **Autoryzacja** - middleware Next.js sprawdza sesję
+- ✅ **Role użytkowników** - rozróżnienie USER/ADMIN
+- ✅ **Parametryzowane zapytania** - ochrona przed SQL Injection
+- ✅ **Walidacja danych** - po stronie frontendu i backendu
+- ✅ **JWT tokens** - bezpieczne sesje
+
+### Ograniczenia dostępu:
+- Endpointy admina wymagają roli `ADMIN`
+- Użytkownicy widzą tylko własne rezerwacje
+- Publiczny dostęp tylko do listy sal (GET /api/rooms)
+
+## 📚 API Endpoints
+
+### Autentykacja
+- `POST /api/auth/callback/credentials` - Logowanie
+- `GET /api/auth/session` - Pobierz sesję
+
+### Użytkownicy
+- `GET /api/users` - Lista użytkowników (ADMIN)
+- `POST /api/users` - Utwórz użytkownika (ADMIN)
+- `POST /api/register` - Rejestracja nowego użytkownika
+
+### Sale
+- `GET /api/rooms` - Lista sal (publiczny)
+- `GET /api/rooms?building=A&floor=1&minCapacity=20` - Filtrowanie sal
+- `POST /api/rooms` - Dodaj salę (ADMIN)
+- `GET /api/rooms/[id]` - Szczegóły sali z rezerwacjami
+
+### Rezerwacje
+- `GET /api/reservations` - Rezerwacje użytkownika
+- `GET /api/reservations?all=true` - Wszystkie rezerwacje (ADMIN)
+- `POST /api/reservations` - Utwórz rezerwację
+- `PATCH /api/reservations/[id]` - Zmień status rezerwacji
+- `DELETE /api/reservations/[id]` - Usuń rezerwację
+
+### Inne
+- `POST /api/seed` - Zainicjalizuj bazę danych przykładowymi danymi
+- `GET /api/health` - Health check
+
+## 🧪 Testowanie
+
+### Manualne testowanie:
+
+#### 1. Test logowania i autoryzacji
+```bash
+# Sprawdź czy można się zalogować jako admin
+# Przejdź do http://localhost:3000/login
+# Zaloguj się: admin@wydzial.pl / admin123
+```
+
+#### 2. Test tworzenia użytkownika (jako admin)
+```bash
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -H "Cookie: authjs.session-token=YOUR_SESSION_TOKEN" \
+  -d '{"email":"test@test.pl","name":"Test User","password":"test123","role":"USER"}'
+```
+
+#### 3. Test pobierania sal
+```bash
+curl http://localhost:3000/api/rooms
+```
+
+#### 4. Test planu pięter
+```
+# Przejdź do http://localhost:3000/floor-plan
+# Sprawdź czy pokazuje się 4 piętra
+# Kliknij na różne piętra
+# Najedź na sale (powinny się podświetlać na niebiesko)
+# Kliknij na salę (przekierowanie do rezerwacji)
+```
+
+### Automatyczne testy (TODO):
+```bash
+npm run test        # Uruchom testy jednostkowe
+npm run test:e2e    # Uruchom testy end-to-end
+```
+
+## 🐛 Debugging
+
+### Problem: Baza danych nie inicjalizuje się
+**Rozwiązanie**: Usuń plik `dev.db` i zrestartuj aplikację lub wywołaj `/api/seed`
+
+### Problem: Błąd autoryzacji
+**Rozwiązanie**: Wyloguj się i zaloguj ponownie, usuń cookies
+
+### Problem: Pokoje nie pokazują się na planie pięter
+**Rozwiązanie**:
+1. Sprawdź czy sale mają właściwe `floor` (1-4)
+2. Sprawdź czy sale są prawidłowo posortowane
+3. Otwórz konsolę developerską i sprawdź błędy
+
+### Problem: sql.js WASM nie ładuje się
+**Rozwiązanie**: Sprawdź czy `node_modules/sql.js/dist/sql-wasm.wasm` istnieje
+
+## 📝 TODO / Przyszłe funkcjonalności
+
+- [ ] Testy jednostkowe (Jest + React Testing Library)
+- [ ] Testy E2E (Playwright)
+- [ ] Pokazywanie zajętości sal na planie pięter
+- [ ] Export rezerwacji do PDF/Excel
+- [ ] Powiadomienia email o rezerwacjach
+- [ ] Recurring reservations (rezerwacje cykliczne)
+- [ ] Filtry w panelu admina
+- [ ] Edycja użytkowników przez admina
+- [ ] Statystyki wykorzystania sal
+- [ ] Dark mode
+- [ ] Responsive design dla mobile
+- [ ] PWA support
+
+## 🤝 Kontryb ucja
+
+1. Fork projektu
+2. Stwórz branch dla feature (`git checkout -b feature/AmazingFeature`)
+3. Commit zmiany (`git commit -m 'Add some AmazingFeature'`)
+4. Push do brancha (`git push origin feature/AmazingFeature`)
+5. Otwórz Pull Request
+
+## 📄 Licencja
+
+Projekt edukacyjny - brak licencji komercyjnej.
+
+## 👨‍💻 Autorzy
+
+- Bartłomiej Sadza - [GitHub](https://github.com/BartlomiejSadza)
+
+## 🙏 Podziękowania
+
+- Next.js team za świetny framework
+- Anthropic za Claude AI który pomógł w development
+- Społeczność open-source
+
+## 📞 Kontakt
+
+W razie pytań lub problemów, otwórz issue na GitHubie:
+https://github.com/BartlomiejSadza/TTSAW/issues
+
+---
+
+**Happy coding! 🎉**
