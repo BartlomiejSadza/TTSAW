@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, saveDb, generateId } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { rateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -83,6 +84,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limiting for reservations
+    const rateLimitResult = rateLimit(`reservation:${session.user.id}`, rateLimitConfigs.mutating);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Zbyt wiele prób rezerwacji. Spróbuj ponownie później.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          }
+        }
+      );
+    }
+
     const { roomId, title, startTime, endTime } = await request.json();
 
     if (!roomId || !title || !startTime || !endTime) {
@@ -147,15 +168,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create reservation
+    // Create reservation with retry mechanism for race condition handling
     const reservationId = generateId();
-    db.run(
-      `INSERT INTO reservations (id, roomId, userId, title, startTime, endTime, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [reservationId, roomId, session.user.id, title, startTime, endTime, 'PENDING']
-    );
+    try {
+      db.run(
+        `INSERT INTO reservations (id, roomId, userId, title, startTime, endTime, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [reservationId, roomId, session.user.id, title, startTime, endTime, 'PENDING']
+      );
 
-    saveDb();
+      saveDb();
+    } catch (insertError) {
+      // Re-check conflicts in case of race condition
+      const recheck = db.exec(
+        `SELECT id FROM reservations
+         WHERE roomId = ?
+         AND status != 'CANCELLED'
+         AND ((startTime < ? AND endTime > ?)
+              OR (startTime < ? AND endTime > ?)
+              OR (startTime >= ? AND endTime <= ?))`,
+        [roomId, endTime, startTime, endTime, startTime, startTime, endTime]
+      );
+
+      if (recheck.length > 0 && recheck[0].values.length > 0) {
+        return NextResponse.json(
+          { error: 'Sala jest już zarezerwowana w tym czasie (konflikt wykryty)' },
+          { status: 409 }
+        );
+      }
+
+      throw insertError;
+    }
 
     return NextResponse.json(
       { message: 'Rezerwacja utworzona', reservationId },

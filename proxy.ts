@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyCSRFProtection } from '@/lib/csrf';
 
 const publicRoutes = ['/login', '/register', '/api/auth', '/api/register', '/api/seed', '/api/health', '/api/rooms'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // CSRF Protection for mutating requests
+  const csrfCheck = verifyCSRFProtection(request);
+  if (!csrfCheck.safe) {
+    return NextResponse.json(
+      { error: 'CSRF validation failed', reason: csrfCheck.reason },
+      { status: 403 }
+    );
+  }
 
   // Check if route is public
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));

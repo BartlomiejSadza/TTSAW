@@ -1,9 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import { getDb, saveDb, generateId } from '@/lib/db';
+import { rateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitResult = rateLimit(`register:${ip}`, rateLimitConfigs.auth);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Zbyt wiele prób rejestracji. Spróbuj ponownie później.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          }
+        }
+      );
+    }
+
     const { email, name, password } = await request.json();
 
     if (!email || !name || !password) {
