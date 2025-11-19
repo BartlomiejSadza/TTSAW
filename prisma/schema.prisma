@@ -30,6 +30,8 @@ model Room {
   capacity     Int
   equipment    String
   description  String?
+  positionX    Float?
+  positionY    Float?
   positionX    Int?
   positionY    Int?
   reservations Reservation[]

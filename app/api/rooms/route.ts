@@ -35,29 +35,9 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-<<<<<<< HEAD
-    const result = db.exec(query, params);
-
-    if (result.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const rooms: Room[] = result[0].values.map((row: (string | number | null | Uint8Array)[]) => ({
-      id: row[0] as string,
-      name: row[1] as string,
-      building: row[2] as string,
-      floor: row[3] as number,
-      capacity: row[4] as number,
-      equipment: JSON.parse(row[5] as string),
-      description: row[6] as string | null,
-      positionX: row[7] as number | null,
-      positionY: row[8] as number | null,
-      createdAt: row[9] as string,
-=======
     const parsedRooms = rooms.map((room) => ({
       ...room,
       equipment: JSON.parse(room.equipment),
->>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
     }));
 
     return NextResponse.json(parsedRooms);
@@ -90,7 +70,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-<<<<<<< HEAD
     // Validate max length
     if (name.length > 100) {
       return NextResponse.json(
@@ -106,16 +85,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDb();
-    const roomId = generateId();
-
-    db.run(
-      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description, positionX, positionY) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [roomId, name, building, floor, capacity, JSON.stringify(equipment || []), description || null, positionX || null, positionY || null]
-    );
-
-    saveDb();
-=======
     const room = await prisma.room.create({
       data: {
         name,
@@ -124,9 +93,10 @@ export async function POST(request: NextRequest) {
         capacity,
         equipment: JSON.stringify(equipment || []),
         description: description || null,
+        positionX: positionX || null,
+        positionY: positionY || null,
       },
     });
->>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 
     return NextResponse.json(
       { message: 'Room created', roomId: room.id },
