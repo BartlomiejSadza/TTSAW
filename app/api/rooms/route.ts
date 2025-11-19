@@ -1,37 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, saveDb, generateId } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import type { Room } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
-    const db = await getDb();
     const { searchParams } = new URL(request.url);
 
     const building = searchParams.get('building');
     const floor = searchParams.get('floor');
     const minCapacity = searchParams.get('minCapacity');
 
-    let query = 'SELECT * FROM rooms WHERE 1=1';
-    const params: (string | number)[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
 
     if (building) {
-      query += ' AND building = ?';
-      params.push(building);
+      where.building = building;
     }
 
     if (floor) {
-      query += ' AND floor = ?';
-      params.push(parseInt(floor));
+      where.floor = parseInt(floor);
     }
 
     if (minCapacity) {
-      query += ' AND capacity >= ?';
-      params.push(parseInt(minCapacity));
+      where.capacity = {
+        gte: parseInt(minCapacity),
+      };
     }
 
-    query += ' ORDER BY building, name';
+    const rooms = await prisma.room.findMany({
+      where,
+      orderBy: [
+        { building: 'asc' },
+        { name: 'asc' },
+      ],
+    });
 
+<<<<<<< HEAD
     const result = db.exec(query, params);
 
     if (result.length === 0) {
@@ -49,9 +53,14 @@ export async function GET(request: NextRequest) {
       positionX: row[7] as number | null,
       positionY: row[8] as number | null,
       createdAt: row[9] as string,
+=======
+    const parsedRooms = rooms.map((room) => ({
+      ...room,
+      equipment: JSON.parse(room.equipment),
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
     }));
 
-    return NextResponse.json(rooms);
+    return NextResponse.json(parsedRooms);
   } catch (error) {
     console.error('Get rooms error:', error);
     return NextResponse.json(
@@ -81,6 +90,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+<<<<<<< HEAD
     // Validate max length
     if (name.length > 100) {
       return NextResponse.json(
@@ -105,9 +115,21 @@ export async function POST(request: NextRequest) {
     );
 
     saveDb();
+=======
+    const room = await prisma.room.create({
+      data: {
+        name,
+        building,
+        floor,
+        capacity,
+        equipment: JSON.stringify(equipment || []),
+        description: description || null,
+      },
+    });
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 
     return NextResponse.json(
-      { message: 'Room created', roomId },
+      { message: 'Room created', roomId: room.id },
       { status: 201 }
     );
   } catch (error) {

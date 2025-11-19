@@ -14,29 +14,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        // Dynamic import to avoid Edge Runtime issues
-        const { getDb } = await import('./db');
+        const { prisma } = await import('@/lib/prisma');
         const bcrypt = await import('bcrypt');
 
-        const db = await getDb();
-        const result = db.exec(
-          `SELECT * FROM users WHERE email = ?`,
-          [credentials.email as string]
-        );
+        const user = await prisma.user.findUnique({
+          where: {
+            email: credentials.email as string,
+          },
+        });
 
-        if (result.length === 0 || result[0].values.length === 0) {
+        if (!user) {
           return null;
         }
-
-        const row = result[0].values[0];
-        const user = {
-          id: row[0] as string,
-          email: row[1] as string,
-          name: row[2] as string,
-          password: row[3] as string,
-          role: row[4] as 'USER' | 'ADMIN',
-          createdAt: row[5] as string,
-        };
 
         const passwordMatch = await bcrypt.compare(
           credentials.password as string,
@@ -51,7 +40,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          role: user.role as any,
         };
       },
     }),

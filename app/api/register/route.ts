@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
-import { getDb, saveDb, generateId } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { rateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -60,11 +60,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDb();
-
     // Check if user exists
-    const existingUser = db.exec('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0 && existingUser[0].values.length > 0) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
       return NextResponse.json(
         { error: 'Użytkownik z tym emailem już istnieje' },
         { status: 400 }
@@ -73,17 +74,18 @@ export async function POST(request: NextRequest) {
 
     // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = generateId();
 
-    db.run(
-      'INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)',
-      [userId, email, name, hashedPassword, 'USER']
-    );
-
-    saveDb();
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+        role: 'USER',
+      },
+    });
 
     return NextResponse.json(
-      { message: 'Konto zostało utworzone', userId },
+      { message: 'Konto zostało utworzone', userId: user.id },
       { status: 201 }
     );
   } catch (error) {

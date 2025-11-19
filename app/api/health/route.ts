@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const db = await getDb();
-    const result = db.exec('SELECT 1');
+    await prisma.$queryRaw`SELECT 1`;
 
     return NextResponse.json({
       status: 'ok',
-      database: result.length > 0 ? 'connected' : 'error',
+      database: 'connected',
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

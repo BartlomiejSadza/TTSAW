@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, saveDb } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
 export async function PATCH(
@@ -15,14 +15,15 @@ export async function PATCH(
     const { id } = await params;
     const { status } = await request.json();
 
-    const db = await getDb();
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+    });
 
-    // Get reservation
-    const result = db.exec('SELECT * FROM reservations WHERE id = ?', [id]);
-    if (result.length === 0 || result[0].values.length === 0) {
+    if (!reservation) {
       return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
     }
 
+<<<<<<< HEAD
     const reservation = result[0].values[0];
     const reservationUserId = reservation[2] as string;
     const reservationRoomId = reservation[1] as string;
@@ -41,6 +42,17 @@ export async function PATCH(
     // Update status
     db.run('UPDATE reservations SET status = ? WHERE id = ?', [status, id]);
     saveDb();
+=======
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (reservation.userId !== session.user.id && (session.user as any).role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await prisma.reservation.update({
+      where: { id },
+      data: { status },
+    });
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 
     return NextResponse.json({ message: 'Reservation updated' });
   } catch (error) {
@@ -60,14 +72,16 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const db = await getDb();
 
-    // Get reservation to check ownership
-    const result = db.exec('SELECT * FROM reservations WHERE id = ?', [id]);
-    if (result.length === 0 || result[0].values.length === 0) {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+    });
+
+    if (!reservation) {
       return NextResponse.json({ error: 'Reservation not found' }, { status: 404 });
     }
 
+<<<<<<< HEAD
     const reservation = result[0].values[0];
     const reservationUserId = reservation[2] as string;
 
@@ -79,10 +93,24 @@ export async function DELETE(
     // For regular users, change status to CANCELLED instead of deleting
     if (session.user.role === 'ADMIN') {
       db.run('DELETE FROM reservations WHERE id = ?', [id]);
-    } else {
-      db.run('UPDATE reservations SET status = ? WHERE id = ?', ['CANCELLED', id]);
+=======
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (reservation.userId !== session.user.id && (session.user as any).role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    saveDb();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((session.user as any).role === 'ADMIN') {
+      await prisma.reservation.delete({
+        where: { id },
+      });
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
+    } else {
+      await prisma.reservation.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
+    }
 
     return NextResponse.json({ message: 'Reservation cancelled' });
   } catch (error) {

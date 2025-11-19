@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, saveDb, generateId } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { rateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDb();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || session.user.id;
     const all = searchParams.get('all') === 'true';
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
+<<<<<<< HEAD
     let query: string;
     let params: (string | number)[];
 
@@ -41,34 +41,33 @@ export async function GET(request: NextRequest) {
         LIMIT ? OFFSET ?
       `;
       params = [userId, limit, offset];
+=======
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+
+    if (all && session.user.role === 'ADMIN') {
+      // No filter on userId
+    } else {
+      where.userId = userId;
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
     }
 
-    const result = db.exec(query, params);
-
-    if (result.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const reservations = result[0].values.map((row: (string | number | null | Uint8Array)[]) => ({
-      id: row[0] as string,
-      roomId: row[1] as string,
-      userId: row[2] as string,
-      title: row[3] as string,
-      startTime: row[4] as string,
-      endTime: row[5] as string,
-      status: row[6] as string,
-      createdAt: row[7] as string,
-      room: {
-        id: row[1] as string,
-        name: row[8] as string,
-        building: row[9] as string,
+    const reservations = await prisma.reservation.findMany({
+      where,
+      include: {
+        room: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
-      user: {
-        id: row[2] as string,
-        name: row[10] as string,
-        email: row[11] as string,
+      orderBy: {
+        startTime: 'desc',
       },
-    }));
+    });
 
     return NextResponse.json(reservations);
   } catch (error) {
@@ -134,40 +133,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDb();
-
     // Check room exists
-    const roomExists = db.exec('SELECT id FROM rooms WHERE id = ?', [roomId]);
-    if (roomExists.length === 0 || roomExists[0].values.length === 0) {
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+    });
+
+    if (!room) {
       return NextResponse.json({ error: 'Sala nie istnieje' }, { status: 404 });
     }
 
     // Check for conflicts
-    const conflicts = db.exec(
-      `SELECT id FROM reservations
-       WHERE roomId = ?
-       AND status != 'CANCELLED'
-       AND ((startTime < ? AND endTime > ?)
-            OR (startTime < ? AND endTime > ?)
-            OR (startTime >= ? AND endTime <= ?))`,
-      [
+    const conflicts = await prisma.reservation.findFirst({
+      where: {
         roomId,
-        endTime,
-        startTime,
-        endTime,
-        startTime,
-        startTime,
-        endTime,
-      ]
-    );
+        status: { not: 'CANCELLED' },
+        AND: [
+          { startTime: { lt: end } },
+          { endTime: { gt: start } },
+        ],
+      },
+    });
 
-    if (conflicts.length > 0 && conflicts[0].values.length > 0) {
+    if (conflicts) {
       return NextResponse.json(
         { error: 'Sala jest już zarezerwowana w tym czasie' },
         { status: 409 }
       );
     }
 
+<<<<<<< HEAD
     // Create reservation with retry mechanism for race condition handling
     const reservationId = generateId();
     try {
@@ -199,9 +193,22 @@ export async function POST(request: NextRequest) {
 
       throw insertError;
     }
+=======
+    // Create reservation
+    const reservation = await prisma.reservation.create({
+      data: {
+        roomId,
+        userId: session.user.id,
+        title,
+        startTime: start,
+        endTime: end,
+        status: 'PENDING',
+      },
+    });
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 
     return NextResponse.json(
-      { message: 'Rezerwacja utworzona', reservationId },
+      { message: 'Rezerwacja utworzona', reservationId: reservation.id },
       { status: 201 }
     );
   } catch (error) {

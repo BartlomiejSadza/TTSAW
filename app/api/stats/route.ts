@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
 export async function GET() {
@@ -9,72 +9,78 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDb();
+    const now = new Date();
 
-    // User's upcoming reservations
-    const upcomingResult = db.exec(
-      `SELECT COUNT(*) FROM reservations
-       WHERE userId = ? AND endTime > datetime('now') AND status != 'CANCELLED'`,
-      [session.user.id]
-    );
-    const upcomingCount = upcomingResult.length > 0 ? upcomingResult[0].values[0][0] as number : 0;
+    const [upcomingCount, roomsCount, totalCount, popularRoomsData, recentReservations] = await Promise.all([
+      // Upcoming count
+      prisma.reservation.count({
+        where: {
+          userId: session.user.id,
+          endTime: { gt: now },
+          status: { not: 'CANCELLED' },
+        },
+      }),
+      // Rooms count
+      prisma.room.count(),
+      // Total reservations count
+      prisma.reservation.count({
+        where: {
+          userId: session.user.id,
+        },
+      }),
+      // Popular rooms
+      prisma.room.findMany({
+        include: {
+          _count: {
+            select: { reservations: true },
+          },
+        },
+        orderBy: {
+          reservations: {
+            _count: 'desc',
+          },
+        },
+        take: 3,
+      }),
+      // Recent reservations
+      prisma.reservation.findMany({
+        where: {
+          userId: session.user.id,
+          endTime: { gt: now },
+          status: { not: 'CANCELLED' },
+        },
+        include: {
+          room: {
+            select: { name: true },
+          },
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+        take: 5,
+      }),
+    ]);
 
-    // Total rooms
-    const roomsResult = db.exec('SELECT COUNT(*) FROM rooms');
-    const roomsCount = roomsResult.length > 0 ? roomsResult[0].values[0][0] as number : 0;
+    const popularRooms = popularRoomsData.map((room) => ({
+      name: room.name,
+      building: room.building,
+      count: room._count.reservations,
+    }));
 
-    // Total reservations (user's)
-    const totalResult = db.exec(
-      'SELECT COUNT(*) FROM reservations WHERE userId = ?',
-      [session.user.id]
-    );
-    const totalCount = totalResult.length > 0 ? totalResult[0].values[0][0] as number : 0;
-
-    // Popular rooms (most reserved)
-    const popularResult = db.exec(`
-      SELECT rm.name, rm.building, COUNT(r.id) as count
-      FROM rooms rm
-      LEFT JOIN reservations r ON rm.id = r.roomId
-      GROUP BY rm.id
-      ORDER BY count DESC
-      LIMIT 3
-    `);
-
-    const popularRooms = popularResult.length > 0
-      ? popularResult[0].values.map((row: (string | number | null | Uint8Array)[]) => ({
-          name: row[0] as string,
-          building: row[1] as string,
-          count: row[2] as number,
-        }))
-      : [];
-
-    // User's recent reservations
-    const recentResult = db.exec(
-      `SELECT r.*, rm.name as roomName
-       FROM reservations r
-       JOIN rooms rm ON r.roomId = rm.id
-       WHERE r.userId = ? AND r.endTime > datetime('now') AND r.status != 'CANCELLED'
-       ORDER BY r.startTime
-       LIMIT 5`,
-      [session.user.id]
-    );
-
-    const recentReservations = recentResult.length > 0
-      ? recentResult[0].values.map((row: (string | number | null | Uint8Array)[]) => ({
-          id: row[0] as string,
-          title: row[3] as string,
-          startTime: row[4] as string,
-          endTime: row[5] as string,
-          roomName: row[8] as string,
-        }))
-      : [];
+    const formattedRecentReservations = recentReservations.map((r) => ({
+      id: r.id,
+      title: r.title,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      roomName: r.room.name,
+    }));
 
     return NextResponse.json({
       upcomingCount,
       roomsCount,
       totalCount,
       popularRooms,
-      recentReservations,
+      recentReservations: formattedRecentReservations,
     });
   } catch (error) {
     console.error('Get stats error:', error);

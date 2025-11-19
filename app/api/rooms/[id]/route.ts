@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { getDb, saveDb } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import type { Room, Reservation } from '@/types';
+=======
+import { prisma } from '@/lib/prisma';
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 
 export async function GET(
   request: NextRequest,
@@ -9,14 +13,28 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const db = await getDb();
 
-    const roomResult = db.exec('SELECT * FROM rooms WHERE id = ?', [id]);
+    const room = await prisma.room.findUnique({
+      where: { id },
+      include: {
+        reservations: {
+          where: {
+            endTime: {
+              gt: new Date(),
+            },
+          },
+          orderBy: {
+            startTime: 'asc',
+          },
+        },
+      },
+    });
 
-    if (roomResult.length === 0 || roomResult[0].values.length === 0) {
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
+<<<<<<< HEAD
     const row = roomResult[0].values[0];
     const room: Room = {
       id: row[0] as string,
@@ -29,31 +47,16 @@ export async function GET(
       positionX: row[7] as number | null,
       positionY: row[8] as number | null,
       createdAt: row[9] as string,
+=======
+    const { reservations, ...roomData } = room;
+
+    const parsedRoom = {
+      ...roomData,
+      equipment: JSON.parse(roomData.equipment),
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
     };
 
-    // Get upcoming reservations for this room
-    const reservationsResult = db.exec(
-      `SELECT * FROM reservations
-       WHERE roomId = ? AND endTime > datetime('now')
-       ORDER BY startTime`,
-      [id]
-    );
-
-    const reservations: Reservation[] =
-      reservationsResult.length > 0
-        ? reservationsResult[0].values.map((r: (string | number | null | Uint8Array)[]) => ({
-            id: r[0] as string,
-            roomId: r[1] as string,
-            userId: r[2] as string,
-            title: r[3] as string,
-            startTime: r[4] as string,
-            endTime: r[5] as string,
-            status: r[6] as 'PENDING' | 'CONFIRMED' | 'CANCELLED',
-            createdAt: r[7] as string,
-          }))
-        : [];
-
-    return NextResponse.json({ room, reservations });
+    return NextResponse.json({ room: parsedRoom, reservations });
   } catch (error) {
     console.error('Get room error:', error);
     return NextResponse.json({ error: 'Failed to fetch room' }, { status: 500 });

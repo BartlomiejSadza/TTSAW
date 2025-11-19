@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { getDb, generateId, saveDb } from '@/lib/db';
+=======
+import { prisma } from '@/lib/prisma';
+>>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 import { auth } from '@/lib/auth';
 import bcrypt from 'bcrypt';
 
@@ -10,20 +14,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Brak uprawnień' }, { status: 401 });
     }
 
-    const db = await getDb();
-    const result = db.exec('SELECT id, email, name, role, createdAt FROM users ORDER BY createdAt DESC');
-
-    if (result.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const users = result[0].values.map((row: (string | number | null | Uint8Array)[]) => ({
-      id: row[0] as string,
-      email: row[1] as string,
-      name: row[2] as string,
-      role: row[3] as string,
-      createdAt: row[4] as string,
-    }));
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     return NextResponse.json(users);
   } catch (error) {
