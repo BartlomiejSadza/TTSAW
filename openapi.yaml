@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: TTSAW (SmartOffice) API
+  description: |
+    API do zarządzania rezerwacjami sal konferencyjnych na uczelni wyższej.
+
+    ## Funkcjonalności:
+    - Autentykacja użytkowników (NextAuth)
+    - Przeglądanie dostępnych sal
+    - Tworzenie i zarządzanie rezerwacjami
+    - Panel administracyjny
+    - Kalendarz rezerwacji
+
+    ## Bezpieczeństwo:
+    - Rate limiting (5 req/15min dla auth, 20 req/min dla mutations)
+    - CSRF protection (Origin/Referer verification)
+    - Email validation
+    - Max length validation
+    - SQL injection protection (prepared statements)
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: admin@wydzial.pl
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://ttsaw.production.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Operacje związane z autentykacją
+  - name: Rooms
+    description: Zarządzanie salami
+  - name: Reservations
+    description: Zarządzanie rezerwacjami
+  - name: Users
+    description: Zarządzanie użytkownikami (Admin only)
+  - name: Calendar
+    description: Widok kalendarza
+  - name: Stats
+    description: Statystyki
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+      description: Session token cookie set by NextAuth
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        retryAfter:
+          type: integer
+          description: Seconds until retry (for rate limiting)
+      required:
+        - error
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          example: c1a2b3c4d5e6f7
+        name:
+          type: string
+          maxLength: 100
+          example: "101"
+        building:
+          type: string
+          example: "A"
+        floor:
+          type: integer
+          example: 1
+        capacity:
+          type: integer
+          example: 30
+        equipment:
+          type: array
+          items:
+            type: string
+          example: ["projektor", "tablica"]
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: "Sala wykładowa z projektorem"
+        positionX:
+          type: integer
+          nullable: true
+        positionY:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - building
+        - floor
+        - capacity
+        - equipment
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: c1a2b3c4d5e6f7
+        roomId:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+          maxLength: 200
+          example: "Spotkanie zespołu"
+        startTime:
+          type: string
+          format: date-time
+          example: "2025-12-01T10:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2025-12-01T11:00:00Z"
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CANCELLED]
+          example: PENDING
+        createdAt:
+          type: string
+          format: date-time
+        room:
+          $ref: '#/components/schemas/Room'
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - id
+        - roomId
+        - userId
+        - title
+        - startTime
+        - endTime
+        - status
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 100
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - role
+
+paths:
+  /api/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: |
+        Create a new user account.
+
+        **Rate Limit:** 5 requests per 15 minutes per IP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                  example: student@wydzial.pl
+                name:
+                  type: string
+                  maxLength: 100
+                  example: Jan Kowalski
+                password:
+                  type: string
+                  minLength: 6
+                  example: securePassword123
+              required:
+                - email
+                - name
+                - password
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  userId:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/rooms:
+    get:
+      tags:
+        - Rooms
+      summary: Get all rooms
+      description: Retrieve a list of all rooms with optional filtering
+      parameters:
+        - name: building
+          in: query
+          schema:
+            type: string
+          example: A
+        - name: floor
+          in: query
+          schema:
+            type: integer
+          example: 1
+        - name: minCapacity
+          in: query
+          schema:
+            type: integer
+          example: 20
+      responses:
+        '200':
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+
+    post:
+      tags:
+        - Rooms
+      summary: Create new room (Admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                building:
+                  type: string
+                floor:
+                  type: integer
+                capacity:
+                  type: integer
+                equipment:
+                  type: array
+                  items:
+                    type: string
+                description:
+                  type: string
+                  maxLength: 500
+                positionX:
+                  type: integer
+                positionY:
+                  type: integer
+              required:
+                - name
+                - building
+                - floor
+                - capacity
+      responses:
+        '201':
+          description: Room created
+        '401':
+          description: Unauthorized
+        '400':
+          description: Validation error
+
+  /api/rooms/{id}:
+    get:
+      tags:
+        - Rooms
+      summary: Get room details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Room details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  reservations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reservation'
+        '404':
+          description: Room not found
+
+    patch:
+      tags:
+        - Rooms
+      summary: Update room (Admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                building:
+                  type: string
+                floor:
+                  type: integer
+                capacity:
+                  type: integer
+                equipment:
+                  type: array
+                  items:
+                    type: string
+                description:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Room updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Room not found
+
+    delete:
+      tags:
+        - Rooms
+      summary: Delete room (Admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Room deleted
+        '400':
+          description: Cannot delete room with active reservations
+        '401':
+          description: Unauthorized
+        '404':
+          description: Room not found
+
+  /api/reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get user's reservations
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: all
+          in: query
+          description: Get all reservations (Admin only)
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          description: Number of results (default 100)
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          description: Offset for pagination (default 0)
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Unauthorized
+
+    post:
+      tags:
+        - Reservations
+      summary: Create new reservation
+      description: |
+        Create a new room reservation.
+
+        **Rate Limit:** 20 requests per minute per user
+        **Race Condition Protection:** Enabled with conflict detection
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomId:
+                  type: string
+                title:
+                  type: string
+                  maxLength: 200
+                startTime:
+                  type: string
+                  format: date-time
+                endTime:
+                  type: string
+                  format: date-time
+              required:
+                - roomId
+                - title
+                - startTime
+                - endTime
+      responses:
+        '201':
+          description: Reservation created
+        '400':
+          description: Validation error
+        '409':
+          description: Room already reserved (conflict)
+        '429':
+          description: Rate limit exceeded
+
+  /api/reservations/{id}:
+    patch:
+      tags:
+        - Reservations
+      summary: Update reservation status
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [PENDING, CONFIRMED, CANCELLED]
+      responses:
+        '200':
+          description: Reservation updated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Reservation not found
+
+    delete:
+      tags:
+        - Reservations
+      summary: Cancel/delete reservation
+      description: Users can cancel (set status to CANCELLED), Admins can delete
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation cancelled/deleted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Reservation not found
+
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: Get all users (Admin only)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+    post:
+      tags:
+        - Users
+      summary: Create user (Admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                name:
+                  type: string
+                  maxLength: 100
+                password:
+                  type: string
+                  minLength: 6
+                role:
+                  type: string
+                  enum: [USER, ADMIN]
+              required:
+                - email
+                - name
+                - password
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  /api/calendar:
+    get:
+      tags:
+        - Calendar
+      summary: Get calendar events
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Calendar events
+        '401':
+          description: Unauthorized
+
+  /api/stats:
+    get:
+      tags:
+        - Stats
+      summary: Get dashboard statistics
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upcomingCount:
+                    type: integer
+                  roomsCount:
+                    type: integer
+                  totalCount:
+                    type: integer
+                  popularRooms:
+                    type: array
+                    items:
+                      type: object
+                  recentReservations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Unauthorized
+
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+                  database:
+                    type: string
+                    example: connected

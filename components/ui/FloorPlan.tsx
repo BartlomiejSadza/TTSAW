@@ -17,9 +17,10 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
     .filter((room) => room.floor === floor)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Generate horseshoe layout positions for 10 rooms
-  // Horseshoe shape: 3 rooms on left, 4 rooms on top, 3 rooms on right
-  const getHorseshoePositions = () => {
+  // Generate horseshoe layout positions for rooms
+  // Horseshoe shape: 3 rooms on left, 4 rooms on top, 3 rooms on right (10 total)
+  // Additional rooms are placed in a grid below the horseshoe
+  const getPositions = (roomCount: number) => {
     const positions = [
       // Left side (bottom to top)
       { x: 50, y: 350 },   // Room 1
@@ -35,10 +36,19 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
       { x: 550, y: 250 },  // Room 9
       { x: 550, y: 350 },  // Room 10
     ];
+
+    // If there are more than 10 rooms, add them in a bottom row
+    if (roomCount > 10) {
+      const extraRooms = roomCount - 10;
+      for (let i = 0; i < extraRooms; i++) {
+        positions.push({ x: 150 + (i * 100), y: 400 });
+      }
+    }
+
     return positions;
   };
 
-  const positions = getHorseshoePositions();
+  const positions = getPositions(floorRooms.length);
 
   // Check if there are any rooms on this floor
   if (floorRooms.length === 0) {
@@ -64,13 +74,8 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
 
         {/* Render rooms */}
         {floorRooms.map((room, index) => {
-          const position = positions[index] || { x: 0, y: 0 };
+          const position = positions[index];
           const isHovered = hoveredRoom === room.id;
-
-          // Warning if more than 10 rooms
-          if (index >= positions.length) {
-            console.warn(`Room ${room.name} on floor ${floor} has no position defined (index ${index})`);
-          }
 
           return (
             <button

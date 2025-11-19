@@ -81,6 +81,10 @@ function initializeSchema(database: SqlJsDatabase) {
       FOREIGN KEY (roomId) REFERENCES rooms(id),
       FOREIGN KEY (userId) REFERENCES users(id)
     );
+
+    CREATE INDEX IF NOT EXISTS idx_reservations_userId ON reservations(userId);
+    CREATE INDEX IF NOT EXISTS idx_reservations_roomId ON reservations(roomId);
+    CREATE INDEX IF NOT EXISTS idx_reservations_startTime ON reservations(startTime);
   `);
 }
 

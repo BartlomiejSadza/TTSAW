@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { addDays, startOfWeek, format, isSameDay } from 'date-fns';
-import { pl } from 'date-fns/locale';
+import { pl } from 'date-fns/locale/pl';
 
 interface CalendarEvent {
   id: string;
@@ -148,7 +148,7 @@ export default function CalendarPage() {
                           onClick={() => setSelectedEvent(event)}
                         >
                           <div className="font-medium truncate">{event.roomName}</div>
-                          <div className="truncate">{event.title.split(' - ')[1]}</div>
+                          <div className="truncate">{event.title.split(' - ')[1] || event.title}</div>
                         </div>
                       ))}
                     </div>
@@ -175,7 +175,7 @@ export default function CalendarPage() {
             <div className="space-y-3">
               <div>
                 <div className="text-sm text-gray-500">Tytuł</div>
-                <div className="font-medium">{selectedEvent.title.split(' - ')[1]}</div>
+                <div className="font-medium">{selectedEvent.title.split(' - ')[1] || selectedEvent.title}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500">Sala</div>
