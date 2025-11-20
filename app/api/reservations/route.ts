@@ -134,23 +134,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Debug: log session and user id
-    console.log('Session user id:', session.user.id);
-    console.log('Session user:', JSON.stringify(session.user));
-
-    // Verify user exists
-    const userExists = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    });
-
-    if (!userExists) {
-      console.error('User not found in database:', session.user.id);
-      return NextResponse.json(
-        { error: 'Sesja wygasła. Zaloguj się ponownie.' },
-        { status: 401 }
-      );
-    }
-
     // Create reservation
     const reservation = await prisma.reservation.create({
       data: {
