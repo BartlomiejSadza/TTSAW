@@ -32,8 +32,6 @@ model Room {
   description  String?
   positionX    Float?
   positionY    Float?
-  positionX    Int?
-  positionY    Int?
   reservations Reservation[]
   createdAt    DateTime      @default(now())
 }

@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-<<<<<<< HEAD
-import { getDb, generateId, saveDb } from '@/lib/db';
-=======
 import { prisma } from '@/lib/prisma';
->>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
 import { auth } from '@/lib/auth';
 import bcrypt from 'bcrypt';
 
@@ -63,34 +59,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hasło musi mieć co najmniej 6 znaków' }, { status: 400 });
     }
 
-    const db = await getDb();
-
     // Check if user already exists
-    const existingUser = db.exec('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0 && existingUser[0].values.length > 0) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
       return NextResponse.json({ error: 'Użytkownik z tym emailem już istnieje' }, { status: 400 });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = generateId();
     const userRole = role || 'USER';
-    const now = new Date().toISOString();
 
     // Insert user
-    db.run(
-      'INSERT INTO users (id, email, name, password, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, email, name, hashedPassword, userRole, now]
-    );
-
-    saveDb();
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+        role: userRole,
+      },
+    });
 
     return NextResponse.json({
-      id: userId,
-      email,
-      name,
-      role: userRole,
-      createdAt: now,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      createdAt: user.createdAt,
     }, { status: 201 });
   } catch (error) {
     console.error('Create user error:', error);

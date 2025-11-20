@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< HEAD
-import { getDb, saveDb } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import type { Room, Reservation } from '@/types';
-=======
 import { prisma } from '@/lib/prisma';
->>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
+import { auth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -34,26 +29,11 @@ export async function GET(
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-<<<<<<< HEAD
-    const row = roomResult[0].values[0];
-    const room: Room = {
-      id: row[0] as string,
-      name: row[1] as string,
-      building: row[2] as string,
-      floor: row[3] as number,
-      capacity: row[4] as number,
-      equipment: JSON.parse(row[5] as string),
-      description: row[6] as string | null,
-      positionX: row[7] as number | null,
-      positionY: row[8] as number | null,
-      createdAt: row[9] as string,
-=======
     const { reservations, ...roomData } = room;
 
     const parsedRoom = {
       ...roomData,
       equipment: JSON.parse(roomData.equipment),
->>>>>>> 2a8db55 (refactor: replace sql.js with prisma ORM)
     };
 
     return NextResponse.json({ room: parsedRoom, reservations });
@@ -76,11 +56,12 @@ export async function PATCH(
     const { id } = await params;
     const { name, building, floor, capacity, equipment, description, positionX, positionY } = await request.json();
 
-    const db = await getDb();
-
     // Check if room exists
-    const roomExists = db.exec('SELECT id FROM rooms WHERE id = ?', [id]);
-    if (roomExists.length === 0 || roomExists[0].values.length === 0) {
+    const existingRoom = await prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!existingRoom) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
@@ -93,50 +74,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Description cannot exceed 500 characters' }, { status: 400 });
     }
 
-    // Build dynamic UPDATE query based on provided fields
-    const updates: string[] = [];
-    const values: (string | number | null)[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (building !== undefined) data.building = building;
+    if (floor !== undefined) data.floor = floor;
+    if (capacity !== undefined) data.capacity = capacity;
+    if (equipment !== undefined) data.equipment = JSON.stringify(equipment);
+    if (description !== undefined) data.description = description;
+    if (positionX !== undefined) data.positionX = positionX;
+    if (positionY !== undefined) data.positionY = positionY;
 
-    if (name !== undefined) {
-      updates.push('name = ?');
-      values.push(name);
-    }
-    if (building !== undefined) {
-      updates.push('building = ?');
-      values.push(building);
-    }
-    if (floor !== undefined) {
-      updates.push('floor = ?');
-      values.push(floor);
-    }
-    if (capacity !== undefined) {
-      updates.push('capacity = ?');
-      values.push(capacity);
-    }
-    if (equipment !== undefined) {
-      updates.push('equipment = ?');
-      values.push(JSON.stringify(equipment));
-    }
-    if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
-    }
-    if (positionX !== undefined) {
-      updates.push('positionX = ?');
-      values.push(positionX);
-    }
-    if (positionY !== undefined) {
-      updates.push('positionY = ?');
-      values.push(positionY);
-    }
-
-    if (updates.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
-    }
-
-    values.push(id);
-    db.run(`UPDATE rooms SET ${updates.join(', ')} WHERE id = ?`, values);
-    saveDb();
+    await prisma.room.update({
+      where: { id },
+      data,
+    });
 
     return NextResponse.json({ message: 'Room updated successfully' });
   } catch (error) {
@@ -156,31 +108,36 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const db = await getDb();
 
     // Check if room exists
-    const roomExists = db.exec('SELECT id FROM rooms WHERE id = ?', [id]);
-    if (roomExists.length === 0 || roomExists[0].values.length === 0) {
+    const existingRoom = await prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!existingRoom) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
     // Check if room has active reservations
-    const activeReservations = db.exec(
-      `SELECT id FROM reservations
-       WHERE roomId = ? AND status != 'CANCELLED' AND endTime > datetime('now')`,
-      [id]
-    );
+    const activeReservations = await prisma.reservation.findFirst({
+      where: {
+        roomId: id,
+        status: { not: 'CANCELLED' },
+        endTime: { gt: new Date() },
+      },
+    });
 
-    if (activeReservations.length > 0 && activeReservations[0].values.length > 0) {
+    if (activeReservations) {
       return NextResponse.json(
         { error: 'Cannot delete room with active reservations' },
         { status: 400 }
       );
     }
 
-    // Delete the room (cascade will handle reservations if needed)
-    db.run('DELETE FROM rooms WHERE id = ?', [id]);
-    saveDb();
+    // Delete the room
+    await prisma.room.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ message: 'Room deleted successfully' });
   } catch (error) {

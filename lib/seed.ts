@@ -1,4 +1,4 @@
-import { getDb, saveDb, generateId } from './db';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 
 // Generate 40 rooms (4 floors × 10 rooms) in horseshoe layout
@@ -23,7 +23,7 @@ const generateRooms = () => {
         building: 'A',
         floor: floor,
         capacity: capacity,
-        equipment: equipment,
+        equipment: JSON.stringify(equipment),
         description: `Sala ${floor}${roomNum.toString().padStart(2, '0')} - ${capacity} miejsc`,
       });
     }
@@ -53,45 +53,52 @@ const users = [
 ];
 
 export async function seed() {
-  const db = await getDb();
+  console.log('Start seeding ...');
 
   // Clear existing data
-  db.run('DELETE FROM reservations');
-  db.run('DELETE FROM rooms');
-  db.run('DELETE FROM users');
+  await prisma.reservation.deleteMany();
+  await prisma.room.deleteMany();
+  await prisma.user.deleteMany();
 
   // Insert users
   for (const user of users) {
     const hashedPassword = await bcrypt.hash(user.password, 10);
-    db.run(
-      'INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)',
-      [generateId(), user.email, user.name, hashedPassword, user.role]
-    );
+    await prisma.user.create({
+      data: {
+        email: user.email,
+        name: user.name,
+        password: hashedPassword,
+        role: user.role as 'USER' | 'ADMIN',
+      },
+    });
   }
 
   // Insert rooms
   for (const room of rooms) {
-    db.run(
-      'INSERT INTO rooms (id, name, building, floor, capacity, equipment, description, positionX, positionY) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        generateId(),
-        room.name,
-        room.building,
-        room.floor,
-        room.capacity,
-        JSON.stringify(room.equipment),
-        room.description,
-        null, // positionX - calculated by FloorPlan component
-        null, // positionY - calculated by FloorPlan component
-      ]
-    );
+    await prisma.room.create({
+      data: {
+        name: room.name,
+        building: room.building,
+        floor: room.floor,
+        capacity: room.capacity,
+        equipment: room.equipment,
+        description: room.description,
+      },
+    });
   }
 
-  saveDb();
   console.log('Database seeded successfully!');
 }
 
 // Run if called directly
 if (require.main === module) {
-  seed().catch(console.error);
+  seed()
+    .then(async () => {
+      await prisma.$disconnect();
+    })
+    .catch(async (e) => {
+      console.error(e);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
 }
