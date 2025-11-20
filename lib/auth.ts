@@ -11,11 +11,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('Missing credentials');
           return null;
         }
 
         const { prisma } = await import('@/lib/prisma');
         const bcrypt = await import('bcrypt');
+
+        console.log('Attempting login for:', credentials.email);
 
         const user = await prisma.user.findUnique({
           where: {
@@ -24,17 +27,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user) {
+          console.log('User not found:', credentials.email);
           return null;
         }
+
+        console.log('User found:', user.email, 'ID:', user.id);
+        console.log('Password hash preview:', user.password.substring(0, 20));
 
         const passwordMatch = await bcrypt.compare(
           credentials.password as string,
           user.password
         );
 
+        console.log('Password match:', passwordMatch);
+
         if (!passwordMatch) {
+          console.log('Password mismatch for user:', credentials.email);
           return null;
         }
+
+        console.log('Login successful for:', user.email);
 
         return {
           id: user.id,
@@ -70,4 +82,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: 'jwt',
   },
+  trustHost: true,
 });

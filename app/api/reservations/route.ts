@@ -6,7 +6,7 @@ import { rateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -131,6 +131,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Sala jest już zarezerwowana w tym czasie' },
         { status: 409 }
+      );
+    }
+
+    // Debug: log session and user id
+    console.log('Session user id:', session.user.id);
+    console.log('Session user:', JSON.stringify(session.user));
+
+    // Verify user exists
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!userExists) {
+      console.error('User not found in database:', session.user.id);
+      return NextResponse.json(
+        { error: 'Sesja wygasła. Zaloguj się ponownie.' },
+        { status: 401 }
       );
     }
 

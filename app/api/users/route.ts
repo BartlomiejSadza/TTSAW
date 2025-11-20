@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 export async function GET() {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Brak uprawnień' }, { status: 401 });
     }
 
@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Brak uprawnień' }, { status: 401 });
     }
 
