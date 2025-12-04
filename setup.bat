@@ -128,7 +128,7 @@ if %errorlevel% equ 0 (
 
 REM Generowanie Prisma Client
 echo [i] Generuje Prisma Client...
-call npx prisma generate --silent
+call npx prisma generate >nul 2>nul
 if %errorlevel% neq 0 (
     echo [X] Blad podczas generowania Prisma Client
     pause

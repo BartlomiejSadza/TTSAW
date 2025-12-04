@@ -92,16 +92,16 @@ else
     # Utwórz plik .env
     cat > .env << EOF
 # Database - domyślnie PostgreSQL lokalny
-DATABASE_URL="${DATABASE_URL}"
+DATABASE_URL=${DATABASE_URL}
 
 # Auth.js v5 configuration (wygenerowane automatycznie)
-AUTH_SECRET="${AUTH_SECRET}"
+AUTH_SECRET=${AUTH_SECRET}
 AUTH_TRUST_HOST=true
-AUTH_URL="http://localhost:3000"
+AUTH_URL=http://localhost:3000
 
 # Legacy NextAuth support
-NEXTAUTH_SECRET="${AUTH_SECRET}"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET=${AUTH_SECRET}
+NEXTAUTH_URL=http://localhost:3000
 EOF
 
     success "Plik .env utworzony"
@@ -142,10 +142,13 @@ info "Wykryto PostgreSQL - sprawdzam czy działa..."
 CURRENT_USER=$(whoami)
 DB_USER=$CURRENT_USER
 
-# Sprawdź czy serwer faktycznie działa
-if ! psql -U $DB_USER -c "SELECT 1" > /dev/null 2>&1; then
-    # Spróbuj z postgres (standardowa instalacja)
-    if psql -U postgres -c "SELECT 1" > /dev/null 2>&1; then
+# Sprawdź czy serwer faktycznie działa (łącz do postgres DB lub template1)
+if ! psql -U $DB_USER -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+    # Spróbuj z template1 dla Homebrew
+    if psql -U $DB_USER -d template1 -c "SELECT 1" > /dev/null 2>&1; then
+        success "PostgreSQL działa poprawnie (użytkownik: $DB_USER)"
+    # Spróbuj z postgres user (standardowa instalacja)
+    elif psql -U postgres -d postgres -c "SELECT 1" > /dev/null 2>&1; then
         DB_USER="postgres"
     else
         error "PostgreSQL jest zainstalowany ale nie działa!"
@@ -160,9 +163,9 @@ if ! psql -U $DB_USER -c "SELECT 1" > /dev/null 2>&1; then
         echo ""
         exit 1
     fi
+else
+    success "PostgreSQL działa poprawnie (użytkownik: $DB_USER)"
 fi
-
-success "PostgreSQL działa poprawnie (użytkownik: $DB_USER)"
 
 # Spróbuj utworzyć bazę
 createdb -U $DB_USER smartoffice 2>/dev/null && success "Baza danych 'smartoffice' utworzona" || info "Baza już istnieje"
@@ -190,7 +193,7 @@ success "Baza danych zainicjalizowana"
 
 # Generowanie Prisma Client
 info "Generuję Prisma Client..."
-if ! npx prisma generate --silent; then
+if ! npx prisma generate > /dev/null 2>&1; then
     die "Błąd podczas generowania Prisma Client!"
 fi
 success "Prisma Client wygenerowany"

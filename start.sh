@@ -16,6 +16,9 @@ if [ ! -f .env ]; then
     echo ""
 fi
 
+# Usuń DATABASE_URL ze środowiska (może override'ować .env)
+unset DATABASE_URL
+
 # Uruchom serwer
 echo "Uruchamiam serwer deweloperski..."
 echo "Otwórz http://localhost:3000 w przeglądarce"
