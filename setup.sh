@@ -1,19 +1,20 @@
 #!/bin/bash
 
 # SmartOffice - Automatyczny skrypt instalacyjny
-# Ten skrypt automatycznie skonfiguruje projekt
-
-set -e  # Zatrzymaj skrypt przy pierwszym błędzie
+# Ten skrypt automatycznie skonfiguruje projekt BEZ zadawania pytań
 
 echo "=================================="
 echo "  SmartOffice - Automatyczna instalacja"
 echo "=================================="
+echo ""
+echo "⚠️  Upewnij się, że PostgreSQL jest uruchomiony!"
 echo ""
 
 # Kolory dla lepszej czytelności
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Funkcja do wyświetlania sukcesów
@@ -31,197 +32,210 @@ warning() {
     echo -e "${YELLOW}⚠${NC} $1"
 }
 
+# Funkcja do wyświetlania informacji
+info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
 # Funkcja do wyświetlania kroków
 step() {
     echo ""
     echo -e "${GREEN}==>${NC} $1"
 }
 
-# Sprawdź czy Node.js jest zainstalowany
-step "Sprawdzam Node.js..."
-if ! command -v node &> /dev/null; then
-    error "Node.js nie jest zainstalowany!"
-    echo "Pobierz Node.js z: https://nodejs.org/"
+# Funkcja do wyjścia z błędem
+die() {
+    error "$1"
     exit 1
+}
+
+# Sprawdź czy Node.js jest zainstalowany
+step "[1/6] Sprawdzam Node.js..."
+if ! command -v node &> /dev/null; then
+    die "Node.js nie jest zainstalowany! Pobierz z: https://nodejs.org/"
 fi
 NODE_VERSION=$(node -v)
-success "Node.js jest zainstalowany: $NODE_VERSION"
+success "Node.js $NODE_VERSION"
 
 # Sprawdź czy npm jest zainstalowany
-step "Sprawdzam npm..."
+step "[2/6] Sprawdzam npm..."
 if ! command -v npm &> /dev/null; then
-    error "npm nie jest zainstalowany!"
-    exit 1
+    die "npm nie jest zainstalowany!"
 fi
 NPM_VERSION=$(npm -v)
-success "npm jest zainstalowany: $NPM_VERSION"
-
-# Sprawdź czy PostgreSQL jest zainstalowany
-step "Sprawdzam PostgreSQL..."
-if command -v psql &> /dev/null; then
-    PSQL_VERSION=$(psql --version)
-    success "PostgreSQL jest zainstalowany: $PSQL_VERSION"
-    HAS_POSTGRES=true
-else
-    warning "PostgreSQL nie znaleziony lokalnie"
-    echo "Możesz:"
-    echo "  1. Zainstalować PostgreSQL lokalnie"
-    echo "  2. Użyć zdalnej bazy danych (np. Vercel Postgres, Supabase, Neon)"
-    echo ""
-    read -p "Czy masz dostęp do bazy PostgreSQL? (tak/nie): " has_db
-    if [[ $has_db != "tak" ]]; then
-        error "Potrzebujesz dostępu do bazy PostgreSQL"
-        echo ""
-        echo "Opcje:"
-        echo "  - Zainstaluj lokalnie: https://www.postgresql.org/download/"
-        echo "  - Użyj darmowego Supabase: https://supabase.com"
-        echo "  - Użyj darmowego Neon: https://neon.tech"
-        exit 1
-    fi
-    HAS_POSTGRES=false
-fi
+success "npm $NPM_VERSION"
 
 # Instalacja zależności
-step "Instaluję zależności npm..."
-npm install
+step "[3/6] Instaluję zależności..."
+info "To może potrwać chwilę..."
+if ! npm install --silent; then
+    die "Błąd podczas instalacji zależności!"
+fi
 success "Zależności zainstalowane"
 
 # Konfiguracja .env
-step "Konfiguruję zmienne środowiskowe..."
-if [ -f .env ]; then
-    warning "Plik .env już istnieje"
-    read -p "Czy chcesz go nadpisać? (tak/nie): " overwrite
-    if [[ $overwrite != "tak" ]]; then
-        warning "Pomijam konfigurację .env"
-    else
-        rm .env
-    fi
-fi
+step "[4/6] Konfiguruję zmienne środowiskowe..."
 
-if [ ! -f .env ]; then
-    echo "Tworzę plik .env..."
+# Sprawdź czy .env już istnieje
+if [ -f .env ]; then
+    warning "Plik .env już istnieje - pomijam"
+else
+    info "Tworzę plik .env z automatycznymi ustawieniami..."
 
     # Generuj AUTH_SECRET
-    echo "Generuję AUTH_SECRET..."
     AUTH_SECRET=$(openssl rand -base64 32)
 
-    # Zapytaj o DATABASE_URL
-    echo ""
-    echo "Konfiguracja bazy danych:"
-    echo "------------------------"
-
-    if [ "$HAS_POSTGRES" = true ]; then
-        echo "Przykładowy DATABASE_URL dla lokalnej bazy:"
-        echo "postgresql://postgres:password@localhost:5432/smartoffice"
-        echo ""
-        read -p "Nazwa bazy danych [smartoffice]: " DB_NAME
-        DB_NAME=${DB_NAME:-smartoffice}
-
-        read -p "Użytkownik PostgreSQL [postgres]: " DB_USER
-        DB_USER=${DB_USER:-postgres}
-
-        read -sp "Hasło PostgreSQL: " DB_PASSWORD
-        echo ""
-
-        read -p "Host [localhost]: " DB_HOST
-        DB_HOST=${DB_HOST:-localhost}
-
-        read -p "Port [5432]: " DB_PORT
-        DB_PORT=${DB_PORT:-5432}
-
-        DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-
-        # Sprawdź czy baza istnieje, jeśli nie - utwórz
-        echo ""
-        echo "Sprawdzam czy baza danych istnieje..."
-        if PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-            success "Baza danych '$DB_NAME' już istnieje"
-        else
-            echo "Tworzę bazę danych '$DB_NAME'..."
-            PGPASSWORD=$DB_PASSWORD createdb -h $DB_HOST -p $DB_PORT -U $DB_USER $DB_NAME 2>/dev/null || warning "Nie udało się utworzyć bazy automatycznie. Utwórz ją ręcznie: CREATE DATABASE $DB_NAME;"
-        fi
-    else
-        echo "Podaj pełny DATABASE_URL od swojego providera (np. Supabase, Neon):"
-        echo "Przykład: postgresql://user:password@hostname:5432/database"
-        read -p "DATABASE_URL: " DATABASE_URL
-    fi
+    # Użyj domyślnych ustawień - whoami dla Homebrew, postgres dla standardowej instalacji
+    CURRENT_USER=$(whoami)
+    DATABASE_URL="postgresql://${CURRENT_USER}@localhost:5432/smartoffice"
 
     # Utwórz plik .env
     cat > .env << EOF
-# Database
+# Database - domyślnie PostgreSQL lokalny
 DATABASE_URL="${DATABASE_URL}"
 
-# Auth.js v5 configuration
+# Auth.js v5 configuration (wygenerowane automatycznie)
 AUTH_SECRET="${AUTH_SECRET}"
 AUTH_TRUST_HOST=true
 AUTH_URL="http://localhost:3000"
 
-# Legacy NextAuth support (opcjonalne)
+# Legacy NextAuth support
 NEXTAUTH_SECRET="${AUTH_SECRET}"
 NEXTAUTH_URL="http://localhost:3000"
 EOF
 
-    success "Plik .env został utworzony"
+    success "Plik .env utworzony"
+    info "DATABASE_URL: postgresql://${CURRENT_USER}@localhost:5432/smartoffice"
 fi
 
 # Inicjalizacja bazy danych
-step "Inicjalizuję bazę danych..."
-echo "Uruchamiam Prisma migrations..."
-npx prisma db push --accept-data-loss
+step "[5/6] Inicjalizuję bazę danych..."
+
+# Sprawdź czy PostgreSQL jest dostępny i działa
+if ! command -v psql &> /dev/null; then
+    error "PostgreSQL nie wykryty!"
+    echo ""
+    echo "Aby uruchomić projekt potrzebujesz PostgreSQL."
+    echo ""
+    echo "Opcje:"
+    echo "  1. Zainstaluj PostgreSQL lokalnie:"
+    echo "     macOS:   brew install postgresql@14"
+    echo "              brew services start postgresql@14"
+    echo ""
+    echo "     Ubuntu:  sudo apt install postgresql postgresql-contrib"
+    echo "              sudo systemctl start postgresql"
+    echo ""
+    echo "     Windows: https://www.postgresql.org/download/windows/"
+    echo ""
+    echo "  2. Lub użyj darmowej bazy w chmurze:"
+    echo "     - Supabase: https://supabase.com (darmowy tier)"
+    echo "     - Neon: https://neon.tech (darmowy tier)"
+    echo "     - Railway: https://railway.app (darmowy tier)"
+    echo ""
+    echo "  Po instalacji/utworzeniu bazy zmień DATABASE_URL w pliku .env"
+    exit 1
+fi
+
+info "Wykryto PostgreSQL - sprawdzam czy działa..."
+
+# Użyj whoami dla Homebrew PostgreSQL, fallback do postgres
+CURRENT_USER=$(whoami)
+DB_USER=$CURRENT_USER
+
+# Sprawdź czy serwer faktycznie działa
+if ! psql -U $DB_USER -c "SELECT 1" > /dev/null 2>&1; then
+    # Spróbuj z postgres (standardowa instalacja)
+    if psql -U postgres -c "SELECT 1" > /dev/null 2>&1; then
+        DB_USER="postgres"
+    else
+        error "PostgreSQL jest zainstalowany ale nie działa!"
+        echo ""
+        echo "Uruchom PostgreSQL:"
+        echo "  macOS:   brew services start postgresql@14"
+        echo "  Linux:   sudo systemctl start postgresql"
+        echo ""
+        echo "Sprawdź status:"
+        echo "  macOS:   brew services list | grep postgres"
+        echo "  Linux:   sudo systemctl status postgresql"
+        echo ""
+        exit 1
+    fi
+fi
+
+success "PostgreSQL działa poprawnie (użytkownik: $DB_USER)"
+
+# Spróbuj utworzyć bazę
+createdb -U $DB_USER smartoffice 2>/dev/null && success "Baza danych 'smartoffice' utworzona" || info "Baza już istnieje"
+
+# Zaktualizuj DATABASE_URL w .env jeśli używamy innego użytkownika niż w pliku
+if [ -f .env ] && [ "$DB_USER" != "$CURRENT_USER" ]; then
+    sed -i.bak "s|postgresql://.*@localhost:5432/smartoffice|postgresql://${DB_USER}@localhost:5432/smartoffice|" .env
+    rm -f .env.bak
+    info "Zaktualizowano DATABASE_URL na użytkownika: $DB_USER"
+fi
+
+# Uruchom Prisma - MUSI się udać!
+info "Uruchamiam migracje Prisma..."
+if ! npx prisma db push --accept-data-loss --skip-generate 2>&1; then
+    error "Błąd podczas migracji bazy danych!"
+    echo ""
+    echo "Sprawdź czy:"
+    echo "  1. PostgreSQL działa: brew services list | grep postgres"
+    echo "  2. Możesz się połączyć: psql -U postgres -c 'SELECT 1'"
+    echo "  3. Baza istnieje: psql -U postgres -l | grep smartoffice"
+    echo ""
+    exit 1
+fi
 success "Baza danych zainicjalizowana"
 
 # Generowanie Prisma Client
-step "Generuję Prisma Client..."
-npx prisma generate
+info "Generuję Prisma Client..."
+if ! npx prisma generate --silent; then
+    die "Błąd podczas generowania Prisma Client!"
+fi
 success "Prisma Client wygenerowany"
 
 # Zaseedowanie bazy danych
-step "Zaseeduję bazę danych przykładowymi danymi..."
-read -p "Czy chcesz zaseedować bazę przykładowymi danymi? (tak/nie) [tak]: " seed_db
-seed_db=${seed_db:-tak}
+step "[6/6] Załadowanie przykładowych danych..."
 
-if [[ $seed_db == "tak" ]]; then
-    if [ -f "prisma/seed.ts" ]; then
-        npm run seed || warning "Seedowanie przez npm nie powiodło się, spróbuję przez API po uruchomieniu"
-        success "Baza danych zaseedowana"
+if [ -f "prisma/seed.ts" ]; then
+    info "Ładuję dane testowe (użytkownicy, sale, rezerwacje)..."
+    if npm run seed 2>&1 | grep -q "error"; then
+        warning "Seedowanie nie powiodło się - możesz to zrobić później: npm run seed"
     else
-        warning "Brak pliku seed.ts, seedowanie nastąpi przez API"
-        SEED_VIA_API=true
+        success "Dane testowe załadowane"
     fi
+else
+    info "Brak seed.ts - dane zostaną załadowane przy pierwszym uruchomieniu"
 fi
 
 # Podsumowanie
 echo ""
 echo "=================================="
-echo -e "${GREEN}  Instalacja zakończona!${NC}"
+echo -e "${GREEN}✓ Instalacja zakończona!${NC}"
 echo "=================================="
 echo ""
-echo "Następne kroki:"
+echo -e "${BLUE}Następne kroki:${NC}"
 echo ""
-echo "1. Uruchom serwer deweloperski:"
+echo "1. Uruchom aplikację:"
 echo -e "   ${YELLOW}npm run dev${NC}"
 echo ""
-echo "2. Otwórz przeglądarkę:"
+echo "2. Otwórz w przeglądarce:"
 echo -e "   ${YELLOW}http://localhost:3000${NC}"
 echo ""
-
-if [ "$SEED_VIA_API" = true ]; then
-    echo "3. Zaseeduj bazę danych (w nowym terminalu gdy serwer działa):"
-    echo -e "   ${YELLOW}curl -X POST http://localhost:3000/api/seed${NC}"
-    echo ""
-fi
-
-echo "Dane logowania (po seedowaniu):"
-echo "  Admin:"
-echo "    Email: admin@wydzial.pl"
-echo "    Hasło: admin123"
+echo -e "${BLUE}Dane do logowania:${NC}"
 echo ""
-echo "  Użytkownik:"
-echo "    Email: student@wydzial.pl"
-echo "    Hasło: student123"
+echo "  👤 Administrator:"
+echo "     Email: admin@wydzial.pl"
+echo "     Hasło: admin123"
 echo ""
-echo "Przydatne komendy:"
-echo "  - Prisma Studio (GUI do bazy): npx prisma studio"
-echo "  - Resetuj bazę danych: npx prisma migrate reset"
+echo "  👤 Użytkownik:"
+echo "     Email: student@wydzial.pl"
+echo "     Hasło: student123"
 echo ""
-echo -e "${GREEN}Miłego kodowania! 🎉${NC}"
+echo -e "${BLUE}Przydatne komendy:${NC}"
+echo "  • npx prisma studio    - GUI do bazy danych"
+echo "  • npm run seed         - Ponowne załadowanie danych"
+echo ""
+echo -e "${GREEN}Gotowe do użycia! 🚀${NC}"
+echo ""

@@ -2,6 +2,37 @@
 
 SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i wykładowych z interaktywnym planem pięter w układzie podkowy.
 
+## ⚡ Quick Start
+
+**KROK 1: Uruchom PostgreSQL** ⚠️
+
+Zanim zaczniesz, upewnij się że PostgreSQL działa:
+
+```bash
+# macOS
+brew services start postgresql@14
+
+# Ubuntu/Debian
+sudo systemctl start postgresql
+
+# Windows - uruchom serwis przez Services lub:
+net start postgresql-x64-14
+```
+
+Nie masz PostgreSQL? Zobacz [sekcję Wymagania](#-wymagania) poniżej.
+
+**KROK 2: Zainstaluj i uruchom**
+
+```bash
+git clone https://github.com/BartlomiejSadza/TTSAW.git && cd TTSAW
+./start.sh      # Linux/macOS
+start.bat       # Windows
+```
+
+To automatycznie zainstaluje wszystko, skonfiguruje bazę i uruchomi app na http://localhost:3000
+
+Gotowe! 🎉
+
 ## 🚀 Funkcjonalności
 
 ### Dla użytkowników:
@@ -31,20 +62,21 @@ SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i
 
 - **Node.js**: wersja 18.x lub nowsza
 - **npm**: wersja 8.x lub nowsza
-- **PostgreSQL**: wersja 14.x lub nowsza (lub dostęp do bazy PostgreSQL)
+- **PostgreSQL**: wersja 14.x lub nowsza
+  - Instalacja: `brew install postgresql` (macOS) lub pobierz z [postgresql.org](https://www.postgresql.org/download/)
+  - Alternatywnie: użyj darmowej bazy w chmurze ([Supabase](https://supabase.com), [Neon](https://neon.tech), [Railway](https://railway.app))
 - **System operacyjny**: Windows, macOS lub Linux
 
 ## 🔧 Instalacja
 
-### Metoda 1: Automatyczna instalacja (ZALECANE) 🚀
+### Automatyczna instalacja (ZALECANE) 🚀
 
-Najłatwiejszy sposób - wszystko zrobi się automatycznie!
+**Najłatwiejszy sposób - 3 komendy i gotowe!**
 
 #### Linux/macOS:
 ```bash
 git clone https://github.com/BartlomiejSadza/TTSAW.git
 cd TTSAW
-chmod +x setup.sh
 ./setup.sh
 ```
 
@@ -55,13 +87,17 @@ cd TTSAW
 setup.bat
 ```
 
-Skrypt automatycznie:
-- ✅ Sprawdzi wymagania systemowe (Node.js, npm, PostgreSQL)
-- ✅ Zainstaluje wszystkie zależności
-- ✅ Wygeneruje plik `.env` z bezpiecznym kluczem
-- ✅ Pomoże skonfigurować bazę danych (lokalną lub zdalną)
+**To wszystko!** Skrypt:
+- ✅ Sprawdzi Node.js, npm i PostgreSQL
+- ✅ Zainstaluje zależności
+- ✅ Wygeneruje bezpieczny klucz AUTH_SECRET
+- ✅ Utworzy bazę danych PostgreSQL
 - ✅ Uruchomi migracje Prisma
-- ✅ Zaseeduje bazę przykładowymi danymi
+- ✅ Załaduje przykładowe dane
+
+**Nie pyta o nic** - wszystko robi automatycznie!
+
+💡 **Wymagane**: PostgreSQL musi być zainstalowany. Jeśli nie masz, skrypt pokaże jak zainstalować lub użyć darmowej bazy w chmurze (Supabase, Neon, Railway)
 
 ---
 
