@@ -21,7 +21,7 @@ SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i
 
 - **Frontend**: Next.js 16.0.1 (App Router), React 19.2.0, TypeScript
 - **Backend**: Next.js API Routes
-- **Baza danych**: SQLite z sql.js (plik dev.db)
+- **Baza danych**: PostgreSQL z Prisma ORM
 - **Autentykacja**: NextAuth.js 5.0-beta.30
 - **Stylowanie**: Tailwind CSS 4
 - **Walidacja**: Bcrypt dla haseł
@@ -31,26 +31,107 @@ SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i
 
 - **Node.js**: wersja 18.x lub nowsza
 - **npm**: wersja 8.x lub nowsza
+- **PostgreSQL**: wersja 14.x lub nowsza (lub dostęp do bazy PostgreSQL)
 - **System operacyjny**: Windows, macOS lub Linux
 
 ## 🔧 Instalacja
 
-### 1. Klonowanie repozytorium
+### Metoda 1: Automatyczna instalacja (ZALECANE) 🚀
+
+Najłatwiejszy sposób - wszystko zrobi się automatycznie!
+
+#### Linux/macOS:
+```bash
+git clone https://github.com/BartlomiejSadza/TTSAW.git
+cd TTSAW
+chmod +x setup.sh
+./setup.sh
+```
+
+#### Windows:
+```cmd
+git clone https://github.com/BartlomiejSadza/TTSAW.git
+cd TTSAW
+setup.bat
+```
+
+Skrypt automatycznie:
+- ✅ Sprawdzi wymagania systemowe (Node.js, npm, PostgreSQL)
+- ✅ Zainstaluje wszystkie zależności
+- ✅ Wygeneruje plik `.env` z bezpiecznym kluczem
+- ✅ Pomoże skonfigurować bazę danych (lokalną lub zdalną)
+- ✅ Uruchomi migracje Prisma
+- ✅ Zaseeduje bazę przykładowymi danymi
+
+---
+
+### Metoda 2: Instalacja ręczna
+
+Jeśli wolisz wszystko zrobić samodzielnie:
+
+#### 1. Klonowanie repozytorium
 
 ```bash
 git clone https://github.com/BartlomiejSadza/TTSAW.git
 cd TTSAW
 ```
 
-### 2. Instalacja zależności
+#### 2. Instalacja zależności
 
 ```bash
 npm install
 ```
 
-### 3. Inicjalizacja bazy danych
+#### 3. Konfiguracja zmiennych środowiskowych
 
-Baza danych inicjalizuje się automatycznie przy pierwszym uruchomieniu. Możesz również ręcznie zaseedować dane:
+Skopiuj plik `.env.example` do `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Następnie edytuj plik `.env` i uzupełnij wartości:
+
+```env
+# Database - URL do bazy PostgreSQL
+DATABASE_URL="postgresql://user:password@localhost:5432/smartoffice"
+
+# Auth.js v5 configuration
+# Wygeneruj secret: openssl rand -base64 32
+AUTH_SECRET="twoj-wygenerowany-sekretny-klucz-min-32-znaki"
+AUTH_TRUST_HOST=true
+AUTH_URL="http://localhost:3000"
+
+# Legacy NextAuth support (opcjonalne, dla kompatybilności wstecznej)
+NEXTAUTH_SECRET="twoj-wygenerowany-sekretny-klucz-min-32-znaki"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+**Uwaga**: Pamiętaj, aby zastąpić `user`, `password` i nazwę bazy danych własnymi wartościami.
+
+#### 4. Inicjalizacja bazy danych
+
+Uruchom migracje Prisma, aby utworzyć tabele w bazie danych:
+
+```bash
+npx prisma db push
+```
+
+Lub użyj migracji (zalecane dla produkcji):
+
+```bash
+npx prisma migrate dev --name init
+```
+
+#### 5. Zaseedowanie bazy danych (opcjonalne)
+
+Wypełnij bazę danych przykładowymi danymi:
+
+```bash
+npm run seed
+```
+
+Lub zrób to poprzez API po uruchomieniu aplikacji:
 
 ```bash
 curl -X POST http://localhost:3000/api/seed
@@ -253,22 +334,54 @@ npm run test        # Uruchom testy jednostkowe
 npm run test:e2e    # Uruchom testy end-to-end
 ```
 
+## 🛠️ Przydatne komendy
+
+```bash
+# Generowanie Prisma Client
+npx prisma generate
+
+# Otworzenie Prisma Studio (GUI do bazy danych)
+npx prisma studio
+
+# Reset bazy danych (usuwa wszystkie dane!)
+npx prisma migrate reset
+
+# Sprawdzenie stanu migracji
+npx prisma migrate status
+
+# Formatowanie schema.prisma
+npx prisma format
+```
+
 ## 🐛 Debugging
 
-### Problem: Baza danych nie inicjalizuje się
-**Rozwiązanie**: Usuń plik `dev.db` i zrestartuj aplikację lub wywołaj `/api/seed`
+### Problem: Błąd połączenia z bazą danych
+**Rozwiązanie**:
+1. Sprawdź czy PostgreSQL działa: `psql -U postgres`
+2. Sprawdź czy `DATABASE_URL` w `.env` jest poprawny
+3. Upewnij się, że baza danych została utworzona
+4. Uruchom `npx prisma db push` ponownie
 
-### Problem: Błąd autoryzacji
-**Rozwiązanie**: Wyloguj się i zaloguj ponownie, usuń cookies
+### Problem: Błąd "AUTH_SECRET is not set"
+**Rozwiązanie**:
+1. Wygeneruj secret: `openssl rand -base64 32`
+2. Dodaj go do `.env` jako `AUTH_SECRET`
+3. Zrestartuj serwer deweloperski
+
+### Problem: Błąd autoryzacji / sesja wygasa
+**Rozwiązanie**: Wyloguj się i zaloguj ponownie, usuń cookies przeglądarki
 
 ### Problem: Pokoje nie pokazują się na planie pięter
 **Rozwiązanie**:
 1. Sprawdź czy sale mają właściwe `floor` (1-4)
-2. Sprawdź czy sale są prawidłowo posortowane
+2. Sprawdź czy dane zostały zaseedowane: `npm run seed`
 3. Otwórz konsolę developerską i sprawdź błędy
 
-### Problem: sql.js WASM nie ładuje się
-**Rozwiązanie**: Sprawdź czy `node_modules/sql.js/dist/sql-wasm.wasm` istnieje
+### Problem: Prisma Client nie generuje się
+**Rozwiązanie**:
+1. Usuń folder `node_modules/.prisma`
+2. Uruchom `npx prisma generate`
+3. Zrestartuj serwer deweloperski
 
 ## 📝 TODO / Przyszłe funkcjonalności
 
