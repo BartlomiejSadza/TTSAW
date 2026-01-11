@@ -4,34 +4,27 @@ SmartOffice to nowoczesny system zarządzania rezerwacjami sal konferencyjnych i
 
 ## ⚡ Quick Start
 
-**KROK 1: Uruchom PostgreSQL** ⚠️
+### 🐳 Docker (ZALECANE)
 
-Zanim zaczniesz, upewnij się że PostgreSQL działa:
-
-```bash
-# macOS
-brew services start postgresql@14
-
-# Ubuntu/Debian
-sudo systemctl start postgresql
-
-# Windows - uruchom serwis przez Services lub:
-net start postgresql-x64-14
-```
-
-Nie masz PostgreSQL? Zobacz [sekcję Wymagania](#-wymagania) poniżej.
-
-**KROK 2: Zainstaluj i uruchom**
+**Najszybszy sposób - wystarczy Docker!**
 
 ```bash
 git clone https://github.com/BartlomiejSadza/TTSAW.git && cd TTSAW
-./start.sh      # Linux/macOS
-start.bat       # Windows
+docker-compose up -d
 ```
 
-To automatycznie zainstaluje wszystko, skonfiguruje bazę i uruchomi app na http://localhost:3000
+Aplikacja uruchomi się na http://localhost:3000
+
+Po pierwszym uruchomieniu załaduj dane testowe:
+```bash
+curl -X POST http://localhost:3000/api/seed
+```
 
 Gotowe! 🎉
+
+### 💻 Instalacja lokalna (bez Docker)
+
+Jeśli wolisz uruchomić bez Docker, zobacz [sekcję Instalacja](#-instalacja) poniżej.
 
 ## 🚀 Funkcjonalności
 
@@ -58,7 +51,82 @@ Gotowe! 🎉
 - **Walidacja**: Bcrypt dla haseł
 - **Powiadomienia**: react-hot-toast
 
-## 📋 Wymagania
+## 🐳 Docker Setup
+
+### Wymagania
+- **Docker**: wersja 20.x lub nowsza
+- **Docker Compose**: wersja 2.x lub nowsza
+
+### Uruchomienie z Docker
+
+**1. Sklonuj repozytorium:**
+```bash
+git clone https://github.com/BartlomiejSadza/TTSAW.git
+cd TTSAW
+```
+
+**2. (Opcjonalne) Utwórz plik `.env`:**
+```bash
+# Jeśli chcesz zmienić domyślne ustawienia
+cp .env.example .env
+# Edytuj .env i ustaw swoje wartości
+```
+
+**3. Uruchom Docker Compose:**
+```bash
+docker-compose up -d
+```
+
+To automatycznie:
+- 🐘 Uruchomi **PostgreSQL** (port 5432)
+- 🚀 Uruchomi **Next.js App** (port 3000)
+- 📦 Wykona migracje bazy danych
+- 🌱 Załaduje dane testowe (przy pierwszym uruchomieniu)
+
+**4. Otwórz aplikację:**
+```
+http://localhost:3000
+```
+
+Poczekaj ~15 sekund na pierwsze uruchomienie (build + migracje + seed).
+
+### Przydatne komendy Docker
+
+```bash
+# Sprawdź logi
+docker-compose logs -f
+
+# Zatrzymaj aplikację
+docker-compose down
+
+# Zatrzymaj i usuń dane
+docker-compose down -v
+
+# Przebuduj po zmianach w kodzie
+docker-compose up -d --build
+
+# Sprawdź status kontenerów
+docker-compose ps
+```
+
+### Zmienne środowiskowe dla Docker
+
+Możesz utworzyć plik `.env` w głównym katalogu z następującymi zmiennymi:
+
+```env
+# NextAuth Secret (wygeneruj: openssl rand -base64 32)
+AUTH_SECRET=your-super-secret-key-min-32-chars
+NEXTAUTH_SECRET=your-super-secret-key-min-32-chars
+
+# Auth URL
+AUTH_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3000
+
+# Database (używane automatycznie przez docker-compose)
+DATABASE_URL=postgresql://smartoffice:smartoffice_dev_password@postgres:5432/smartoffice
+```
+
+## 📋 Wymagania (instalacja lokalna bez Docker)
 
 - **Node.js**: wersja 18.x lub nowsza
 - **npm**: wersja 8.x lub nowsza
@@ -67,43 +135,9 @@ Gotowe! 🎉
   - Alternatywnie: użyj darmowej bazy w chmurze ([Supabase](https://supabase.com), [Neon](https://neon.tech), [Railway](https://railway.app))
 - **System operacyjny**: Windows, macOS lub Linux
 
-## 🔧 Instalacja
+## 🔧 Instalacja (lokalna bez Docker)
 
-### Automatyczna instalacja (ZALECANE) 🚀
-
-**Najłatwiejszy sposób - 3 komendy i gotowe!**
-
-#### Linux/macOS:
-```bash
-git clone https://github.com/BartlomiejSadza/TTSAW.git
-cd TTSAW
-./setup.sh
-```
-
-#### Windows:
-```cmd
-git clone https://github.com/BartlomiejSadza/TTSAW.git
-cd TTSAW
-setup.bat
-```
-
-**To wszystko!** Skrypt:
-- ✅ Sprawdzi Node.js, npm i PostgreSQL
-- ✅ Zainstaluje zależności
-- ✅ Wygeneruje bezpieczny klucz AUTH_SECRET
-- ✅ Utworzy bazę danych PostgreSQL
-- ✅ Uruchomi migracje Prisma
-- ✅ Załaduje przykładowe dane
-
-**Nie pyta o nic** - wszystko robi automatycznie!
-
-💡 **Wymagane**: PostgreSQL musi być zainstalowany. Jeśli nie masz, skrypt pokaże jak zainstalować lub użyć darmowej bazy w chmurze (Supabase, Neon, Railway)
-
----
-
-### Metoda 2: Instalacja ręczna
-
-Jeśli wolisz wszystko zrobić samodzielnie:
+Jeśli nie chcesz używać Docker:
 
 #### 1. Klonowanie repozytorium
 

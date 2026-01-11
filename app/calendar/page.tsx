@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { addDays, startOfWeek, format, isSameDay } from 'date-fns';
-import { pl } from 'date-fns/locale/pl';
+import { pl } from 'date-fns/locale';
 
 interface CalendarEvent {
   id: string;
