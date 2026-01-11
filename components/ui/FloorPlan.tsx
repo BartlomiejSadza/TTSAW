@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import { Room } from '@/types';
+import { Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface FloorPlanProps {
   floor: number;
   rooms: Room[];
   onRoomClick: (room: Room) => void;
+  selectedRoomId?: string;
 }
 
-export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps) {
+export default function FloorPlan({ floor, rooms, onRoomClick, selectedRoomId }: FloorPlanProps) {
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
 
   // Filter and sort rooms for this floor
@@ -19,29 +22,28 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
 
   // Generate horseshoe layout positions for rooms
   // Horseshoe shape: 3 rooms on left, 4 rooms on top, 3 rooms on right (10 total)
-  // Additional rooms are placed in a grid below the horseshoe
   const getPositions = (roomCount: number) => {
     const positions = [
       // Left side (bottom to top)
-      { x: 50, y: 350 },   // Room 1
-      { x: 50, y: 250 },   // Room 2
-      { x: 50, y: 150 },   // Room 3
+      { x: 50, y: 320 },   // Room 1
+      { x: 50, y: 210 },   // Room 2
+      { x: 50, y: 100 },   // Room 3
       // Top side (left to right)
-      { x: 150, y: 50 },   // Room 4
-      { x: 250, y: 50 },   // Room 5
-      { x: 350, y: 50 },   // Room 6
-      { x: 450, y: 50 },   // Room 7
+      { x: 160, y: 20 },   // Room 4
+      { x: 270, y: 20 },   // Room 5
+      { x: 380, y: 20 },   // Room 6
+      { x: 490, y: 20 },   // Room 7
       // Right side (top to bottom)
-      { x: 550, y: 150 },  // Room 8
-      { x: 550, y: 250 },  // Room 9
-      { x: 550, y: 350 },  // Room 10
+      { x: 570, y: 100 },  // Room 8
+      { x: 570, y: 210 },  // Room 9
+      { x: 570, y: 320 },  // Room 10
     ];
 
     // If there are more than 10 rooms, add them in a bottom row
     if (roomCount > 10) {
       const extraRooms = roomCount - 10;
       for (let i = 0; i < extraRooms; i++) {
-        positions.push({ x: 150 + (i * 100), y: 400 });
+        positions.push({ x: 160 + (i * 110), y: 420 });
       }
     }
 
@@ -53,38 +55,64 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
   // Check if there are any rooms on this floor
   if (floorRooms.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Piętro {floor}</h2>
-        <div className="relative w-full h-[450px] bg-white rounded-lg border-2 border-gray-300 shadow-inner flex items-center justify-center">
-          <p className="text-gray-400 text-lg">Brak sal na tym piętrze</p>
+      <div className="rounded-xl p-6 bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)]">
+        <div className="relative w-full h-[450px] rounded-xl bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] flex items-center justify-center">
+          <p className="text-[var(--color-text-tertiary)] text-lg">Brak sal na tym piętrze</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900">Piętro {floor}</h2>
+    <div className="rounded-xl p-6 bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)]">
+      <div className="relative w-full h-[450px] rounded-xl bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] overflow-hidden">
+        {/* Background Grid Pattern */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `
+              linear-gradient(var(--color-border-subtle) 1px, transparent 1px),
+              linear-gradient(90deg, var(--color-border-subtle) 1px, transparent 1px)
+            `,
+            backgroundSize: '40px 40px',
+          }}
+        />
 
-      <div className="relative w-full h-[450px] bg-white rounded-lg border-2 border-gray-300 shadow-inner">
-        {/* Courtyard label in the center */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
-          Dziedziniec
+        {/* Courtyard in the center */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-40">
+          <div className="w-full h-full rounded-2xl bg-[var(--color-courtyard)] border-2 border-dashed border-[var(--color-border-default)] flex items-center justify-center">
+            <span className="text-[var(--color-text-tertiary)] text-sm font-medium">
+              Dziedziniec
+            </span>
+          </div>
         </div>
 
         {/* Render rooms */}
         {floorRooms.map((room, index) => {
           const position = positions[index];
           const isHovered = hoveredRoom === room.id;
+          const isSelected = selectedRoomId === room.id;
 
           return (
             <button
               key={room.id}
-              className={`absolute w-20 h-20 rounded-lg border-2 font-semibold text-sm transition-all duration-200 transform ${
-                isHovered
-                  ? 'bg-blue-500 text-white border-blue-600 scale-110 shadow-lg z-10'
-                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-400 hover:text-white hover:border-blue-500 hover:scale-105'
-              }`}
+              className={cn(
+                `
+                  absolute w-[90px] h-[80px]
+                  rounded-xl
+                  border-2
+                  font-semibold text-sm
+                  transition-all duration-[var(--duration-normal)] ease-[var(--ease-default)]
+                  flex flex-col items-center justify-center gap-1
+                  cursor-pointer
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-elevated)]
+                `,
+                isSelected
+                  ? 'bg-[var(--color-room-selected)] border-[var(--color-accent-primary)] shadow-[var(--glow-primary)] z-20 scale-105'
+                  : isHovered
+                    ? 'bg-[var(--color-accent-primary-muted)] border-[var(--color-accent-primary)] shadow-[var(--glow-primary)] z-10 scale-105'
+                    : 'bg-[var(--color-room-available)] border-[var(--color-room-border)] hover:bg-[var(--color-accent-primary-muted)] hover:border-[var(--color-accent-primary)] hover:scale-105'
+              )}
               style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
@@ -94,24 +122,41 @@ export default function FloorPlan({ floor, rooms, onRoomClick }: FloorPlanProps)
               onMouseLeave={() => setHoveredRoom(null)}
               title={`${room.name} - Pojemność: ${room.capacity}`}
             >
-              <div className="flex flex-col items-center justify-center h-full">
-                <span className="text-xs font-bold">{room.name}</span>
-                <span className="text-xs opacity-75">{room.capacity} os.</span>
-              </div>
+              <span className={cn(
+                'text-sm font-bold font-[family-name:var(--font-heading)]',
+                isSelected || isHovered
+                  ? 'text-[var(--color-accent-primary)]'
+                  : 'text-[var(--color-text-primary)]'
+              )}>
+                {room.name}
+              </span>
+              <span className={cn(
+                'flex items-center gap-1 text-xs',
+                isSelected || isHovered
+                  ? 'text-[var(--color-accent-primary-hover)]'
+                  : 'text-[var(--color-text-secondary)]'
+              )}>
+                <Users size={12} />
+                {room.capacity}
+              </span>
             </button>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+      <div className="mt-4 flex items-center gap-6 text-sm text-[var(--color-text-secondary)]">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+          <div className="w-5 h-5 rounded bg-[var(--color-room-available)] border border-[var(--color-room-border)]" />
           <span>Dostępna</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
+          <div className="w-5 h-5 rounded bg-[var(--color-room-selected)] border border-[var(--color-accent-primary)] shadow-[var(--glow-primary)]" />
           <span>Wybrana</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded bg-[var(--color-room-booked)] border border-[var(--color-border-subtle)] opacity-60" />
+          <span>Zajęta</span>
         </div>
       </div>
     </div>

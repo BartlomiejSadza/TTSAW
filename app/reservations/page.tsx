@@ -5,6 +5,15 @@ import toast from 'react-hot-toast';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { formatDateTime } from '@/lib/utils';
+import {
+  Building2,
+  Calendar,
+  Clock,
+  XCircle,
+  CalendarCheck,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 
 interface ReservationWithRoom {
   id: string;
@@ -79,21 +88,16 @@ export default function ReservationsPage() {
   });
 
   const getStatusBadge = (status: string) => {
-    const styles = {
-      PENDING: 'bg-yellow-100 text-yellow-700',
-      CONFIRMED: 'bg-green-100 text-green-700',
-      CANCELLED: 'bg-red-100 text-red-700',
+    const config = {
+      PENDING: { class: 'badge-warning', label: 'Oczekująca', icon: Clock },
+      CONFIRMED: { class: 'badge-success', label: 'Potwierdzona', icon: CalendarCheck },
+      CANCELLED: { class: 'badge-error', label: 'Anulowana', icon: XCircle },
     };
-
-    const labels = {
-      PENDING: 'Oczekująca',
-      CONFIRMED: 'Potwierdzona',
-      CANCELLED: 'Anulowana',
-    };
-
+    const { class: badgeClass, label, icon: Icon } = config[status as keyof typeof config] || { class: 'badge-default', label: status, icon: AlertCircle };
     return (
-      <span className={`px-2 py-1 text-xs rounded-full ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+      <span className={`badge ${badgeClass} flex items-center gap-1`}>
+        <Icon size={12} />
+        {label}
       </span>
     );
   };
@@ -101,75 +105,71 @@ export default function ReservationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Ładowanie rezerwacji...</div>
+        <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)]" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Moje rezerwacje</h1>
-        <p className="text-gray-600 mt-1">Zarządzaj swoimi rezerwacjami sal</p>
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="page-header">
+        <h1 className="page-title font-[family-name:var(--font-heading)]">Moje rezerwacje</h1>
+        <p className="page-description">Zarządzaj swoimi rezerwacjami sal</p>
       </div>
 
+      {/* Filter Tabs */}
       <Card>
         <div className="flex gap-2">
-          <Button
-            variant={filter === 'upcoming' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setFilter('upcoming')}
-          >
-            Nadchodzące
-          </Button>
-          <Button
-            variant={filter === 'past' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setFilter('past')}
-          >
-            Przeszłe
-          </Button>
-          <Button
-            variant={filter === 'all' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            Wszystkie
-          </Button>
+          {[
+            { key: 'upcoming', label: 'Nadchodzące' },
+            { key: 'past', label: 'Przeszłe' },
+            { key: 'all', label: 'Wszystkie' },
+          ].map((tab) => (
+            <Button
+              key={tab.key}
+              variant={filter === tab.key ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setFilter(tab.key as typeof filter)}
+            >
+              {tab.label}
+            </Button>
+          ))}
         </div>
       </Card>
 
+      {/* Reservations List */}
       {filteredReservations.length === 0 ? (
         <Card>
-          <div className="text-center py-8">
-            <p className="text-gray-500">Brak rezerwacji</p>
+          <div className="text-center py-12">
+            <CalendarCheck size={48} className="mx-auto text-[var(--color-text-tertiary)] mb-4" strokeWidth={1} />
+            <p className="text-[var(--color-text-secondary)]">Brak rezerwacji</p>
           </div>
         </Card>
       ) : (
         <div className="space-y-4">
           {filteredReservations.map((reservation) => (
-            <Card key={reservation.id}>
+            <Card key={reservation.id} className="hover:border-[var(--color-border-default)] transition-colors">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] font-[family-name:var(--font-heading)]">
                       {reservation.title}
                     </h3>
                     {getStatusBadge(reservation.status)}
                   </div>
 
-                  <div className="mt-2 space-y-1 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <span>🏫</span>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+                      <Building2 size={16} className="text-[var(--color-text-tertiary)]" />
                       <span>
                         Sala {reservation.room.name} (Budynek {reservation.room.building})
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span>📅</span>
+                    <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+                      <Calendar size={16} className="text-[var(--color-text-tertiary)]" />
                       <span>
-                        {formatDateTime(reservation.startTime)} -{' '}
-                        {formatDateTime(reservation.endTime)}
+                        {formatDateTime(reservation.startTime)} - {formatDateTime(reservation.endTime)}
                       </span>
                     </div>
                   </div>
@@ -181,6 +181,7 @@ export default function ReservationsPage() {
                       variant="danger"
                       size="sm"
                       onClick={() => cancelReservation(reservation.id)}
+                      leftIcon={<XCircle size={16} />}
                     >
                       Anuluj
                     </Button>
