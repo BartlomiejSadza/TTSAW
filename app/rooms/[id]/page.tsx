@@ -7,6 +7,20 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import type { Room, Reservation } from '@/types';
 import { formatDateTime } from '@/lib/utils';
+import {
+  ArrowLeft,
+  Users,
+  Wrench,
+  FileText,
+  Calendar,
+  Clock,
+  X,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  MapPin,
+  Building2,
+} from 'lucide-react';
 
 export default function RoomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -79,10 +93,20 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    const config = {
+      PENDING: { class: 'badge-warning', label: 'Oczekująca' },
+      CONFIRMED: { class: 'badge-success', label: 'Potwierdzona' },
+      CANCELLED: { class: 'badge-error', label: 'Anulowana' },
+    };
+    const { class: badgeClass, label } = config[status as keyof typeof config] || { class: 'badge-default', label: status };
+    return <span className={`badge ${badgeClass}`}>{label}</span>;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Ładowanie...</div>
+        <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)]" />
       </div>
     );
   }
@@ -90,9 +114,10 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   if (!room) {
     return (
       <Card>
-        <div className="text-center py-8">
-          <p className="text-gray-500">Sala nie została znaleziona</p>
-          <Button variant="secondary" className="mt-4" onClick={() => router.push('/rooms')}>
+        <div className="text-center py-12">
+          <Building2 size={48} className="mx-auto text-[var(--color-text-tertiary)] mb-4" strokeWidth={1} />
+          <p className="text-[var(--color-text-secondary)] mb-4">Sala nie została znaleziona</p>
+          <Button variant="secondary" onClick={() => router.push('/rooms')}>
             Powrót do listy sal
           </Button>
         </div>
@@ -101,83 +126,108 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sala {room.name}</h1>
-          <p className="text-gray-600 mt-1">Budynek {room.building}, Piętro {room.floor}</p>
+          <h1 className="page-title font-[family-name:var(--font-heading)]">
+            Sala {room.name}
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <MapPin size={16} className="text-[var(--color-text-tertiary)]" />
+            <span className="text-[var(--color-text-secondary)]">
+              Budynek {room.building}, Piętro {room.floor}
+            </span>
+          </div>
         </div>
-        <Button variant="secondary" onClick={() => router.push('/rooms')}>
+        <Button
+          variant="secondary"
+          onClick={() => router.push('/rooms')}
+          leftIcon={<ArrowLeft size={18} />}
+        >
           Powrót
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Room Info Card */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informacje o sali</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">👥</span>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-6 font-[family-name:var(--font-heading)]">
+            Informacje o sali
+          </h2>
+          <div className="space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-[var(--color-accent-primary-muted)]">
+                <Users size={20} className="text-[var(--color-accent-primary)]" />
+              </div>
               <div>
-                <div className="font-medium">Pojemność</div>
-                <div className="text-gray-600">{room.capacity} osób</div>
+                <div className="font-medium text-[var(--color-text-primary)]">Pojemność</div>
+                <div className="text-[var(--color-text-secondary)]">{room.capacity} osób</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🔧</span>
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-[var(--color-accent-secondary-muted)]">
+                <Wrench size={20} className="text-[var(--color-accent-secondary)]" />
+              </div>
               <div>
-                <div className="font-medium">Wyposażenie</div>
-                <div className="text-gray-600">{room.equipment.join(', ')}</div>
+                <div className="font-medium text-[var(--color-text-primary)]">Wyposażenie</div>
+                <div className="text-[var(--color-text-secondary)]">{room.equipment.join(', ')}</div>
               </div>
             </div>
 
             {room.description && (
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">📝</span>
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-[var(--color-success-muted)]">
+                  <FileText size={20} className="text-[var(--color-success)]" />
+                </div>
                 <div>
-                  <div className="font-medium">Opis</div>
-                  <div className="text-gray-600">{room.description}</div>
+                  <div className="font-medium text-[var(--color-text-primary)]">Opis</div>
+                  <div className="text-[var(--color-text-secondary)]">{room.description}</div>
                 </div>
               </div>
             )}
           </div>
 
           <Button
-            variant="primary"
-            className="w-full mt-6"
+            className="w-full mt-8"
+            size="lg"
             onClick={() => setShowReservationForm(true)}
+            leftIcon={<Calendar size={18} />}
           >
             Zarezerwuj salę
           </Button>
         </Card>
 
+        {/* Upcoming Reservations Card */}
         <Card>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Nadchodzące rezerwacje</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-6 font-[family-name:var(--font-heading)]">
+            Nadchodzące rezerwacje
+          </h2>
           {reservations.length === 0 ? (
-            <p className="text-gray-500">Brak nadchodzących rezerwacji</p>
+            <div className="text-center py-8">
+              <Calendar size={48} className="mx-auto text-[var(--color-text-tertiary)] mb-3" strokeWidth={1} />
+              <p className="text-[var(--color-text-secondary)]">Brak nadchodzących rezerwacji</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {reservations.slice(0, 10).map((reservation) => (
                 <div
                   key={reservation.id}
-                  className="p-3 bg-gray-50 rounded-lg"
+                  className="p-4 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]"
                 >
-                  <div className="font-medium">{reservation.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {formatDateTime(reservation.startTime)} - {formatDateTime(reservation.endTime)}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="font-medium text-[var(--color-text-primary)]">
+                      {reservation.title}
+                    </div>
+                    {getStatusBadge(reservation.status)}
                   </div>
-                  <span
-                    className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${
-                      reservation.status === 'CONFIRMED'
-                        ? 'bg-green-100 text-green-700'
-                        : reservation.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {reservation.status}
-                  </span>
+                  <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                    <Clock size={14} />
+                    <span>
+                      {formatDateTime(reservation.startTime)} - {formatDateTime(reservation.endTime)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -185,12 +235,22 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
         </Card>
       </div>
 
+      {/* Reservation Modal */}
       {showReservationForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Rezerwacja sali {room.name}
-            </h2>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <Card variant="glass" className="w-full max-w-md animate-slideUp">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)] font-[family-name:var(--font-heading)]">
+                Rezerwacja sali {room.name}
+              </h2>
+              <button
+                onClick={() => setShowReservationForm(false)}
+                className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
             <form onSubmit={handleReservation} className="space-y-4">
               <Input
                 label="Tytuł rezerwacji"
@@ -200,6 +260,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                 }
                 placeholder="np. Spotkanie zespołu"
                 required
+                leftIcon={<FileText size={18} />}
               />
 
               <Input
@@ -211,6 +272,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                 }
                 min={new Date().toISOString().split('T')[0]}
                 required
+                leftIcon={<Calendar size={18} />}
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -222,6 +284,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                     setReservationData({ ...reservationData, startTime: e.target.value })
                   }
                   required
+                  leftIcon={<Clock size={18} />}
                 />
 
                 <Input
@@ -232,14 +295,18 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                     setReservationData({ ...reservationData, endTime: e.target.value })
                   }
                   required
+                  leftIcon={<Clock size={18} />}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div>
+                <div className="flex items-center gap-2 p-4 rounded-lg bg-[var(--color-error-muted)] text-[var(--color-error)] text-sm">
+                  <AlertCircle size={18} />
+                  {error}
+                </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
                   variant="secondary"
@@ -248,7 +315,12 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
                 >
                   Anuluj
                 </Button>
-                <Button type="submit" className="flex-1" isLoading={isSubmitting}>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  isLoading={isSubmitting}
+                  leftIcon={<CheckCircle size={18} />}
+                >
                   Zarezerwuj
                 </Button>
               </div>
