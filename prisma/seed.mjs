@@ -15,10 +15,17 @@ const generateRooms = () => {
     ['komputery', 'tablica'],
   ];
 
+  const roomTypes = ['LABORATORY', 'LECTURE', 'CONFERENCE'];
+
   for (let floor = 1; floor <= 4; floor++) {
     for (let roomNum = 1; roomNum <= 10; roomNum++) {
       const capacity = 10 + Math.floor(Math.random() * 40);
       const equipment = equipmentOptions[Math.floor(Math.random() * equipmentOptions.length)];
+      const roomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+
+      // Randomly assign some rooms as "already used today" (dirty)
+      const isCleaned = Math.random() > 0.3; // 30% chance of being dirty
+      const lastUsedAt = !isCleaned ? new Date(Date.now() - Math.random() * 8 * 60 * 60 * 1000) : null; // Random time in last 8 hours
 
       rooms.push({
         name: `${floor}${roomNum.toString().padStart(2, '0')}`,
@@ -27,6 +34,9 @@ const generateRooms = () => {
         capacity: capacity,
         equipment: JSON.stringify(equipment),
         description: `Sala ${floor}${roomNum.toString().padStart(2, '0')} - ${capacity} miejsc`,
+        roomType: roomType,
+        isCleaned: isCleaned,
+        lastUsedAt: lastUsedAt,
       });
     }
   }
@@ -87,6 +97,9 @@ async function main() {
         capacity: room.capacity,
         equipment: room.equipment,
         description: room.description,
+        roomType: room.roomType,
+        isCleaned: room.isCleaned,
+        lastUsedAt: room.lastUsedAt,
       },
     });
   }

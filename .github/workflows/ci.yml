@@ -1,0 +1,133 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-build:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/smartoffice
+          AUTH_SECRET: test-secret-min-32-characters-long-for-ci
+          AUTH_URL: http://localhost:3000
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: .next
+          retention-days: 1
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env file for Docker
+        run: |
+          cat > .env << EOF
+          DATABASE_URL=postgresql://smartoffice:password@postgres:5432/smartoffice
+          AUTH_SECRET=test-secret-min-32-characters-long-for-ci-cd-pipeline
+          AUTH_URL=http://localhost:3000
+          NODE_ENV=production
+          EOF
+
+      - name: Build and start services with Docker Compose
+        run: docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if docker compose exec -T postgres pg_isready -U smartoffice; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Check application health
+        run: |
+          echo "Waiting for application to start..."
+          sleep 10
+
+          # Try to reach the application
+          for i in {1..15}; do
+            if curl -f http://localhost:3000/api/health || curl -f http://localhost:3000; then
+              echo "Application is responding!"
+              exit 0
+            fi
+            echo "Waiting for app... ($i/15)"
+            sleep 2
+          done
+
+          echo "Application failed to start"
+          docker compose logs app
+          exit 1
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker Compose Services ==="
+          docker compose ps
+          echo ""
+          echo "=== Application Logs ==="
+          docker compose logs app
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          docker compose logs postgres
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down -v
+
+  success:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [lint-and-build, docker-build]
+    if: success()
+
+    steps:
+      - name: Success message
+        run: |
+          echo "✅ All CI checks passed!"
+          echo "✅ Lint and build: OK"
+          echo "✅ Docker compose build: OK"
+          echo "✅ Ready to merge!"

@@ -1,5 +1,6 @@
 export type Role = 'USER' | 'ADMIN';
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+export type RoomType = 'LABORATORY' | 'LECTURE' | 'CONFERENCE';
 
 export interface User {
   id: string;
@@ -18,6 +19,9 @@ export interface Room {
   capacity: number;
   equipment: string[];
   description: string | null;
+  roomType: RoomType;
+  isCleaned: boolean;
+  lastUsedAt: string | null;
   positionX?: number | null;
   positionY?: number | null;
   createdAt: string;

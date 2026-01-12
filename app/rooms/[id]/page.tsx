@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import type { Room, Reservation } from '@/types';
 import { formatDateTime } from '@/lib/utils';
+import QRCode from 'qrcode';
 import {
   ArrowLeft,
   Users,
@@ -20,6 +21,8 @@ import {
   Loader2,
   MapPin,
   Building2,
+  QrCode as QrCodeIcon,
+  Download,
 } from 'lucide-react';
 
 export default function RoomDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +32,9 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showReservationForm, setShowReservationForm] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [reservationData, setReservationData] = useState({
     title: '',
     date: '',
@@ -56,6 +62,50 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
     fetchRoom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const generateQRCode = async () => {
+    if (!room) return;
+
+    const roomUrl = `${window.location.origin}/rooms/${id}`;
+
+    try {
+      // Generate QR code as data URL
+      const qrUrl = await QRCode.toDataURL(roomUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#8b5cf6', // Primary accent color
+          light: '#0c0c0f', // Background color
+        },
+      });
+
+      setQrCodeUrl(qrUrl);
+      setShowQRCode(true);
+
+      // Also generate on canvas for download
+      if (qrCanvasRef.current) {
+        QRCode.toCanvas(qrCanvasRef.current, roomUrl, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: '#8b5cf6',
+            light: '#ffffff',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('QR code generation failed:', error);
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (!qrCanvasRef.current || !room) return;
+
+    const link = document.createElement('a');
+    link.download = `qr-code-${room.name.replace(/\s+/g, '-').toLowerCase()}.png`;
+    link.href = qrCanvasRef.current.toDataURL();
+    link.click();
+  };
 
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,14 +239,25 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
-          <Button
-            className="w-full mt-8"
-            size="lg"
-            onClick={() => setShowReservationForm(true)}
-            leftIcon={<Calendar size={18} />}
-          >
-            Zarezerwuj salę
-          </Button>
+          <div className="space-y-3 mt-8">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => setShowReservationForm(true)}
+              leftIcon={<Calendar size={18} />}
+            >
+              Zarezerwuj salę
+            </Button>
+            <Button
+              className="w-full"
+              size="lg"
+              variant="secondary"
+              onClick={generateQRCode}
+              leftIcon={<QrCodeIcon size={18} />}
+            >
+              Pokaż kod QR
+            </Button>
+          </div>
         </Card>
 
         {/* Upcoming Reservations Card */}
@@ -234,6 +295,56 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </Card>
       </div>
+
+      {/* QR Code Modal */}
+      {showQRCode && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <Card variant="glass" className="w-full max-w-md animate-slideUp">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)] font-[family-name:var(--font-heading)]">
+                Kod QR - {room?.name}
+              </h2>
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="text-center space-y-4">
+              <p className="text-[var(--color-text-secondary)] text-sm">
+                Zeskanuj kod QR aby szybko zarezerwować tę salę
+              </p>
+
+              {qrCodeUrl && (
+                <div className="flex justify-center">
+                  <div className="p-4 rounded-xl bg-white inline-block">
+                    <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                  </div>
+                </div>
+              )}
+
+              <canvas ref={qrCanvasRef} className="hidden" />
+
+              <div className="pt-4">
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={downloadQRCode}
+                  leftIcon={<Download size={18} />}
+                >
+                  Pobierz kod QR
+                </Button>
+              </div>
+
+              <div className="text-xs text-[var(--color-text-tertiary)] pt-2">
+                URL: {window.location.origin}/rooms/{id}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Reservation Modal */}
       {showReservationForm && (

@@ -22,6 +22,12 @@ enum Role {
   ADMIN
 }
 
+enum RoomType {
+  LABORATORY
+  LECTURE
+  CONFERENCE
+}
+
 model Room {
   id           String        @id @default(cuid())
   name         String
@@ -30,6 +36,9 @@ model Room {
   capacity     Int
   equipment    String
   description  String?
+  roomType     RoomType      @default(LECTURE)
+  isCleaned    Boolean       @default(true)
+  lastUsedAt   DateTime?
   positionX    Float?
   positionY    Float?
   reservations Reservation[]

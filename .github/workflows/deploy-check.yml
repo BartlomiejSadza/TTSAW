@@ -1,0 +1,81 @@
+name: Deployment Readiness
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deployment-check:
+    name: Check Deployment Readiness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production build
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/smartoffice
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'test-secret-min-32-characters-long-for-deployment' }}
+          AUTH_URL: ${{ secrets.AUTH_URL || 'http://localhost:3000' }}
+          NODE_ENV: production
+
+      - name: Check required environment variables
+        run: |
+          echo "Checking required environment variables..."
+
+          REQUIRED_VARS=("DATABASE_URL" "AUTH_SECRET" "AUTH_URL")
+          MISSING_VARS=()
+
+          for var in "${REQUIRED_VARS[@]}"; do
+            if [ -z "${!var}" ]; then
+              MISSING_VARS+=("$var")
+            fi
+          done
+
+          if [ ${#MISSING_VARS[@]} -ne 0 ]; then
+            echo "⚠️ Warning: Missing environment variables for production:"
+            printf '%s\n' "${MISSING_VARS[@]}"
+            echo ""
+            echo "Make sure to set these in your deployment environment!"
+          else
+            echo "✅ All required environment variables are set"
+          fi
+
+      - name: Security audit
+        run: npm audit --production
+        continue-on-error: true
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "Checking for outdated dependencies..."
+          npm outdated || true
+
+      - name: Deployment summary
+        run: |
+          echo "🚀 Deployment Readiness Summary"
+          echo "================================"
+          echo "✅ Production build: Success"
+          echo "✅ Node.js version: $(node --version)"
+          echo "✅ npm version: $(npm --version)"
+          echo ""
+          echo "📦 Build artifacts ready for deployment"
+          echo "🐳 Docker image can be built and deployed"
+          echo ""
+          echo "Next steps:"
+          echo "1. Ensure DATABASE_URL is set in production"
+          echo "2. Generate secure AUTH_SECRET (min 32 chars)"
+          echo "3. Set correct AUTH_URL for your domain"
+          echo "4. Run database migrations: npx prisma migrate deploy"
+          echo "5. Seed database if needed: curl -X POST /api/seed"

@@ -49,3 +49,4 @@ next-env.d.ts
 cookies.txt
 *_cookies.txt
 .env.local
+.env*.local
