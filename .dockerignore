@@ -62,6 +62,6 @@ next-env.d.ts
 *.db-journal
 
 # Scripts (no longer needed with Docker)
-*.sh
-!docker-entrypoint.sh
 *.bat
+# Explicitly allow docker-entrypoint.sh (must come AFTER *.sh would match)
+# But safer to just not ignore .sh files since we need docker-entrypoint.sh

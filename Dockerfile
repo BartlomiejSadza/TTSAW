@@ -50,10 +50,11 @@ COPY --from=builder /app/prisma ./prisma
 # Create public directory (might be empty)
 RUN mkdir -p public
 
-# Copy entrypoint script
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-COPY prisma/seed.mjs /app/prisma/seed.mjs
-RUN chmod +x /app/docker-entrypoint.sh
+# Copy entrypoint script from builder stage
+COPY --from=builder /app/docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --from=builder /app/prisma/seed.mjs /app/prisma/seed.mjs
+# Fix Windows CRLF line endings and make executable
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Set permissions
 RUN chown -R nextjs:nodejs /app
