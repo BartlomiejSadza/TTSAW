@@ -69,13 +69,13 @@ jobs:
           EOF
 
       - name: Build and start services with Docker Compose
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for PostgreSQL to be ready..."
           for i in {1..30}; do
-            if docker-compose exec -T postgres pg_isready -U smartoffice; then
+            if docker compose exec -T postgres pg_isready -U smartoffice; then
               echo "PostgreSQL is ready!"
               break
             fi
@@ -99,24 +99,24 @@ jobs:
           done
 
           echo "Application failed to start"
-          docker-compose logs app
+          docker compose logs app
           exit 1
 
       - name: Show logs on failure
         if: failure()
         run: |
           echo "=== Docker Compose Services ==="
-          docker-compose ps
+          docker compose ps
           echo ""
           echo "=== Application Logs ==="
-          docker-compose logs app
+          docker compose logs app
           echo ""
           echo "=== PostgreSQL Logs ==="
-          docker-compose logs postgres
+          docker compose logs postgres
 
       - name: Stop Docker Compose
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
 
   success:
     name: All Checks Passed
