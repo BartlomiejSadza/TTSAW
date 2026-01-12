@@ -62,14 +62,14 @@ const users = [
 ];
 
 async function main() {
-  console.log('Checking if database needs seeding...');
+  console.log('Starting fresh database seed...');
 
-  // Check if data already exists
-  const existingUsers = await prisma.user.count();
-  if (existingUsers > 0) {
-    console.log('Database already has data, skipping seed.');
-    return;
-  }
+  // Clean existing data (CAREFUL - this deletes everything!)
+  console.log('Cleaning existing data...');
+  await prisma.reservation.deleteMany({});
+  await prisma.room.deleteMany({});
+  await prisma.user.deleteMany({});
+  console.log('Database cleaned!');
 
   console.log('Seeding database...');
 
