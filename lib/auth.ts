@@ -17,7 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const { prisma } = await import('@/lib/prisma');
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
 
         const user = await prisma.user.findUnique({
           where: {

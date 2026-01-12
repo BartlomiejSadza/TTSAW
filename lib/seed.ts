@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Generate 40 rooms (4 floors × 10 rooms) in horseshoe layout
 const generateRooms = () => {
