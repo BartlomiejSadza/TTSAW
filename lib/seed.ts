@@ -34,20 +34,17 @@ const generateRooms = () => {
 
 const rooms = generateRooms();
 
-// WARNING: These are test accounts with weak passwords.
-// NEVER use these credentials in production!
-// For production, use strong passwords and change these defaults immediately.
 const users = [
   {
     email: 'admin@wydzial.pl',
     name: 'Admin',
-    password: 'Admin2024!SecurePassword', // Changed from weak 'admin123'
+    password: 'admin123',
     role: 'ADMIN',
   },
   {
     email: 'student@wydzial.pl',
     name: 'Jan Kowalski',
-    password: 'Student2024!Test', // Changed from weak 'student123'
+    password: 'student123',
     role: 'USER',
   },
 ];
