@@ -10,6 +10,7 @@ import {
   Map,
   CalendarCheck,
   Calendar,
+  CalendarClock,
   Settings,
 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ const menuItems = [
   { href: '/floor-plan', label: 'Plan pięter', icon: Map },
   { href: '/reservations', label: 'Moje rezerwacje', icon: CalendarCheck },
   { href: '/calendar', label: 'Kalendarz', icon: Calendar },
+  { href: '/schedule', label: 'Plan zajęć sal', icon: CalendarClock },
 ];
 
 const adminItems = [
