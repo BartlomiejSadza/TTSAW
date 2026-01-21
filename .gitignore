@@ -51,5 +51,5 @@ cookies.txt
 .env.local
 .env*.local
 
-# USOS data files
-DUDA_USOS*.csv
+# USOS data files (teraz w repo dla seeda)
+# DUDA_USOS*.csv
