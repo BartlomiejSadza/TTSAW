@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,15 +13,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start');
     const endDate = searchParams.get('end');
+    const roomId = searchParams.get('roomId');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
+    const where: Prisma.ReservationWhereInput = {
       status: { not: 'CANCELLED' },
     };
 
     if (startDate && endDate) {
       where.startTime = { gte: new Date(startDate) };
       where.endTime = { lte: new Date(endDate) };
+    }
+
+    // Filtruj po sali jeśli podano
+    if (roomId) {
+      where.roomId = roomId;
     }
 
     const reservations = await prisma.reservation.findMany({

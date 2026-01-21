@@ -3,53 +3,49 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// Generate 40 rooms (4 floors x 10 rooms) in horseshoe layout
-const generateRooms = () => {
-  const rooms = [];
-  const equipmentOptions = [
-    ['projektor', 'tablica'],
-    ['projektor', 'tablica', 'komputery'],
-    ['tablica', 'mikrofon'],
-    ['projektor', 'mikrofon', 'naglosnienie'],
-    ['projektor', 'tablica', 'klimatyzacja'],
-    ['komputery', 'tablica'],
-  ];
+// Rzeczywiste sale z D-14 i D-14a z podanymi pojemnościami
+const rooms = [
+  // Aula i duże sale wykładowe (D-14)
+  { name: 'Aula', building: 'D-14', floor: 1, capacity: 194, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'mikrofon', 'nagłośnienie']), description: 'Aula główna - 194 miejsca' },
+  { name: 'A-0.3', building: 'D-14a', floor: 0, capacity: 203, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'mikrofon', 'nagłośnienie']), description: 'Sala wykładowa A-0.3 - 203 miejsca' },
 
-  const roomTypes = ['LABORATORY', 'LECTURE', 'CONFERENCE'];
+  // Sale wykładowe D-14
+  { name: '118', building: 'D-14', floor: 1, capacity: 90, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 118 - 90 miejsc' },
+  { name: '207', building: 'D-14', floor: 2, capacity: 70, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 207 - 70 miejsc' },
+  { name: '116', building: 'D-14', floor: 1, capacity: 40, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 116 - 40 miejsc' },
+  { name: '219', building: 'D-14', floor: 2, capacity: 90, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 219 - 90 miejsc' },
+  { name: '119', building: 'D-14', floor: 1, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 119 - 30 miejsc' },
 
-  for (let floor = 1; floor <= 4; floor++) {
-    for (let roomNum = 1; roomNum <= 10; roomNum++) {
-      const capacity = 10 + Math.floor(Math.random() * 40);
-      const equipment = equipmentOptions[Math.floor(Math.random() * equipmentOptions.length)];
-      const roomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+  // Sale wykładowe D-14a
+  { name: '2.6', building: 'D-14a', floor: 2, capacity: 109, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 2.6 - 109 miejsc' },
+  { name: '1.6', building: 'D-14a', floor: 1, capacity: 109, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 1.6 - 109 miejsc' },
+  { name: '0.1', building: 'D-14a', floor: 0, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 0.1 - 30 miejsc' },
+  { name: '0.2', building: 'D-14a', floor: 0, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 0.2 - 30 miejsc' },
+  { name: '1.1', building: 'D-14a', floor: 1, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 1.1 - 30 miejsc' },
+  { name: '1.2', building: 'D-14a', floor: 1, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 1.2 - 30 miejsc' },
+  { name: '2.1', building: 'D-14a', floor: 2, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 2.1 - 30 miejsc' },
+  { name: '2.2', building: 'D-14a', floor: 2, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 2.2 - 30 miejsc' },
+  { name: '3.1', building: 'D-14a', floor: 3, capacity: 30, roomType: 'LECTURE', equipment: JSON.stringify(['projektor', 'tablica']), description: 'Sala wykładowa 3.1 - 30 miejsc' },
 
-      // Randomly assign some rooms as "already used today" (dirty)
-      const isCleaned = Math.random() > 0.3; // 30% chance of being dirty
-      const lastUsedAt = !isCleaned ? new Date(Date.now() - Math.random() * 8 * 60 * 60 * 1000) : null; // Random time in last 8 hours
+  // Sale komputerowe D-14a
+  { name: '3.6', building: 'D-14a', floor: 3, capacity: 20, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor', 'tablica']), description: 'Sala komputerowa 3.6 - 20 miejsc' },
+  { name: '3.2', building: 'D-14a', floor: 3, capacity: 30, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor', 'tablica']), description: 'Sala komputerowa 3.2 - 30 miejsc' },
+  { name: '3.7', building: 'D-14a', floor: 3, capacity: 30, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor', 'tablica']), description: 'Sala komputerowa 3.7 - 30 miejsc' },
 
-      rooms.push({
-        name: `${floor}${roomNum.toString().padStart(2, '0')}`,
-        building: 'A',
-        floor: floor,
-        capacity: capacity,
-        equipment: JSON.stringify(equipment),
-        description: `Sala ${floor}${roomNum.toString().padStart(2, '0')} - ${capacity} miejsc`,
-        roomType: roomType,
-        isCleaned: isCleaned,
-        lastUsedAt: lastUsedAt,
-      });
-    }
-  }
-
-  return rooms;
-};
-
-const rooms = generateRooms();
+  // Sale komputerowe D-14
+  { name: '320', building: 'D-14', floor: 3, capacity: 15, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor']), description: 'Sala komputerowa 320 - 15 miejsc' },
+  { name: '307', building: 'D-14', floor: 3, capacity: 30, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor', 'tablica']), description: 'Sala komputerowa 307 - 30 miejsc' },
+  { name: '319', building: 'D-14', floor: 3, capacity: 30, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor', 'tablica']), description: 'Sala komputerowa 319 - 30 miejsc' },
+  { name: '206', building: 'D-14', floor: 2, capacity: 15, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor']), description: 'Sala komputerowa 206 - 15 miejsc' },
+  { name: '220', building: 'D-14', floor: 2, capacity: 15, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor']), description: 'Sala komputerowa 220 - 15 miejsc' },
+  { name: '315', building: 'D-14', floor: 3, capacity: 15, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor']), description: 'Sala komputerowa 315 - 15 miejsc' },
+  { name: '106', building: 'D-14', floor: 1, capacity: 15, roomType: 'LABORATORY', equipment: JSON.stringify(['komputery', 'projektor']), description: 'Sala komputerowa 106 - 15 miejsc' },
+];
 
 const users = [
   {
     email: 'admin@wydzial.pl',
-    name: 'Admin',
+    name: 'Administrator',
     password: 'admin123',
     role: 'ADMIN',
   },
@@ -62,7 +58,7 @@ const users = [
 ];
 
 async function main() {
-  console.log('Starting fresh database seed...');
+  console.log('Starting fresh database seed with real room data...');
 
   // Clean existing data (CAREFUL - this deletes everything!)
   console.log('Cleaning existing data...');
@@ -98,14 +94,14 @@ async function main() {
         equipment: room.equipment,
         description: room.description,
         roomType: room.roomType,
-        isCleaned: room.isCleaned,
-        lastUsedAt: room.lastUsedAt,
+        isCleaned: true,
+        lastUsedAt: null,
       },
     });
   }
-  console.log(`Created ${rooms.length} rooms`);
+  console.log(`Created ${rooms.length} rooms (D-14 and D-14a)`);
 
-  console.log('Database seeded successfully!');
+  console.log('Database seeded successfully with real room data!');
 }
 
 main()

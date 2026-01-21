@@ -53,6 +53,10 @@ RUN mkdir -p public
 # Copy entrypoint script from builder stage
 COPY --from=builder /app/docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY --from=builder /app/prisma/seed.mjs /app/prisma/seed.mjs
+
+# Copy CSV file for schedule import
+COPY --from=builder "/app/DUDA_USOS_ROZLICZENIE_ZIMA_2025_2026(USOS_ROZLICZENIE_ZIMA_2025_2026).csv" "/app/DUDA_USOS_ROZLICZENIE_ZIMA_2025_2026(USOS_ROZLICZENIE_ZIMA_2025_2026).csv"
+
 # Fix Windows CRLF line endings and make executable
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 

@@ -7,8 +7,8 @@ echo "Starting SmartOffice..."
 echo "Setting up database schema..."
 npx prisma db push --skip-generate
 
-# Seed the database (will skip if data exists)
-echo "Seeding database..."
+# Always seed with fresh data (clean start each deployment)
+echo "Seeding database with fresh room data..."
 node /app/prisma/seed.mjs
 
 # Start the server
