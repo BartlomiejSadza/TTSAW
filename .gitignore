@@ -50,3 +50,6 @@ cookies.txt
 *_cookies.txt
 .env.local
 .env*.local
+
+# USOS data files
+DUDA_USOS*.csv
