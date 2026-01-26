@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import { addDays, startOfWeek, format, isSameDay } from 'date-fns';
-import { pl } from 'date-fns/locale';
+import { useState, useEffect, useCallback } from "react";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import { addDays, startOfWeek, format, isSameDay } from "date-fns";
+import { pl } from "date-fns/locale";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,7 +16,7 @@ import {
   Loader2,
   ChevronDown,
   Search,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface Room {
   id: string;
@@ -44,19 +44,21 @@ export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null,
+  );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch rooms on mount
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch('/api/rooms');
+        const response = await fetch("/api/rooms");
         const data = await response.json();
         setRooms(data);
       } catch (error) {
-        console.error('Failed to fetch rooms:', error);
+        console.error("Failed to fetch rooms:", error);
       } finally {
         setIsLoading(false);
       }
@@ -77,12 +79,12 @@ export default function SchedulePage() {
       const end = addDays(start, 7);
 
       const response = await fetch(
-        `/api/calendar?start=${start.toISOString()}&end=${end.toISOString()}&roomId=${selectedRoom.id}`
+        `/api/calendar?start=${start.toISOString()}&end=${end.toISOString()}&roomId=${selectedRoom.id}`,
       );
       const data = await response.json();
       setEvents(data);
     } catch (error) {
-      console.error('Failed to fetch events:', error);
+      console.error("Failed to fetch events:", error);
     } finally {
       setIsLoadingEvents(false);
     }
@@ -116,7 +118,7 @@ export default function SchedulePage() {
   const filteredRooms = rooms.filter(
     (room) =>
       room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      room.building.toLowerCase().includes(searchQuery.toLowerCase())
+      room.building.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Group rooms by building
@@ -128,13 +130,16 @@ export default function SchedulePage() {
       acc[room.building].push(room);
       return acc;
     },
-    {} as Record<string, Room[]>
+    {} as Record<string, Room[]>,
   );
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)]" />
+        <Loader2
+          size={32}
+          className="animate-spin text-[var(--color-text-tertiary)]"
+        />
       </div>
     );
   }
@@ -148,7 +153,7 @@ export default function SchedulePage() {
             Plan zajec sal
           </h1>
           <p className="page-description">
-            Wybierz sale z listy, aby zobaczyc jej harmonogram
+            Wybierz salę z listy, aby zobaczyc jej harmonogram
           </p>
         </div>
 
@@ -159,16 +164,25 @@ export default function SchedulePage() {
             className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] rounded-lg text-left transition-all hover:border-[var(--color-border-strong)] focus:outline-none focus:border-[var(--color-accent-primary)] focus:ring-2 focus:ring-[var(--color-accent-primary-muted)]"
           >
             <div className="flex items-center gap-3">
-              <Building2 size={20} className="text-[var(--color-text-tertiary)]" />
-              <span className={selectedRoom ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-tertiary)]'}>
+              <Building2
+                size={20}
+                className="text-[var(--color-text-tertiary)]"
+              />
+              <span
+                className={
+                  selectedRoom
+                    ? "text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-tertiary)]"
+                }
+              >
                 {selectedRoom
                   ? `${selectedRoom.name} (${selectedRoom.building})`
-                  : 'Wybierz sale...'}
+                  : "Wybierz sale..."}
               </span>
             </div>
             <ChevronDown
               size={20}
-              className={`text-[var(--color-text-tertiary)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+              className={`text-[var(--color-text-tertiary)] transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
             />
           </button>
 
@@ -194,33 +208,35 @@ export default function SchedulePage() {
 
               {/* Room List */}
               <div className="overflow-y-auto max-h-72">
-                {Object.entries(roomsByBuilding).map(([building, buildingRooms]) => (
-                  <div key={building}>
-                    <div className="px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider bg-[var(--color-bg-elevated)]">
-                      {building}
+                {Object.entries(roomsByBuilding).map(
+                  ([building, buildingRooms]) => (
+                    <div key={building}>
+                      <div className="px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider bg-[var(--color-bg-elevated)]">
+                        {building}
+                      </div>
+                      {buildingRooms.map((room) => (
+                        <button
+                          key={room.id}
+                          onClick={() => {
+                            setSelectedRoom(room);
+                            setIsDropdownOpen(false);
+                            setSearchQuery("");
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-hover)] ${
+                            selectedRoom?.id === room.id
+                              ? "bg-[var(--color-accent-primary-muted)] text-[var(--color-accent-primary)]"
+                              : "text-[var(--color-text-primary)]"
+                          }`}
+                        >
+                          <span className="font-medium">{room.name}</span>
+                          <span className="text-sm text-[var(--color-text-tertiary)]">
+                            {room.capacity} miejsc
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                    {buildingRooms.map((room) => (
-                      <button
-                        key={room.id}
-                        onClick={() => {
-                          setSelectedRoom(room);
-                          setIsDropdownOpen(false);
-                          setSearchQuery('');
-                        }}
-                        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-hover)] ${
-                          selectedRoom?.id === room.id
-                            ? 'bg-[var(--color-accent-primary-muted)] text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-primary)]'
-                        }`}
-                      >
-                        <span className="font-medium">{room.name}</span>
-                        <span className="text-sm text-[var(--color-text-tertiary)]">
-                          {room.capacity} miejsc
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
+                  ),
+                )}
 
                 {filteredRooms.length === 0 && (
                   <div className="px-4 py-8 text-center text-[var(--color-text-tertiary)]">
@@ -262,19 +278,23 @@ export default function SchedulePage() {
           </Button>
         </div>
         <h2 className="font-semibold text-[var(--color-text-primary)] font-[family-name:var(--font-heading)]">
-          {format(weekStart, 'LLLL yyyy', { locale: pl })}
+          {format(weekStart, "LLLL yyyy", { locale: pl })}
         </h2>
       </div>
 
       {/* Calendar Grid */}
       {!selectedRoom ? (
         <Card className="p-12 text-center">
-          <Building2 size={48} className="mx-auto mb-4 text-[var(--color-text-tertiary)]" />
+          <Building2
+            size={48}
+            className="mx-auto mb-4 text-[var(--color-text-tertiary)]"
+          />
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
             Wybierz sale
           </h3>
           <p className="text-[var(--color-text-secondary)]">
-            Uzyj listy rozwijanej powyzej, aby wybrac sale i zobaczyc jej harmonogram zajec.
+            Uzyj listy rozwijanej powyzej, aby wybrac sale i zobaczyc jej
+            harmonogram zajec.
           </p>
         </Card>
       ) : (
@@ -286,7 +306,8 @@ export default function SchedulePage() {
                 {selectedRoom.name}
               </h3>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                {selectedRoom.building} | Pietro {selectedRoom.floor} | {selectedRoom.capacity} miejsc
+                {selectedRoom.building} | Pietro {selectedRoom.floor} |{" "}
+                {selectedRoom.capacity} miejsc
               </p>
             </div>
             <Button
@@ -301,7 +322,10 @@ export default function SchedulePage() {
 
           {isLoadingEvents ? (
             <div className="flex items-center justify-center h-64">
-              <Loader2 size={32} className="animate-spin text-[var(--color-text-tertiary)]" />
+              <Loader2
+                size={32}
+                className="animate-spin text-[var(--color-text-tertiary)]"
+              />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -316,27 +340,27 @@ export default function SchedulePage() {
                       key={day.toISOString()}
                       className={`p-3 text-sm font-medium text-center border-r border-[var(--color-border-subtle)] ${
                         isSameDay(day, new Date())
-                          ? 'bg-[var(--color-accent-primary-muted)]'
-                          : ''
+                          ? "bg-[var(--color-accent-primary-muted)]"
+                          : ""
                       }`}
                     >
                       <div
                         className={
                           isSameDay(day, new Date())
-                            ? 'text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-secondary)]'
+                            ? "text-[var(--color-accent-primary)]"
+                            : "text-[var(--color-text-secondary)]"
                         }
                       >
-                        {format(day, 'EEEE', { locale: pl })}
+                        {format(day, "EEEE", { locale: pl })}
                       </div>
                       <div
                         className={`text-lg font-bold ${
                           isSameDay(day, new Date())
-                            ? 'text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-primary)]'
+                            ? "text-[var(--color-accent-primary)]"
+                            : "text-[var(--color-text-primary)]"
                         }`}
                       >
-                        {format(day, 'd')}
+                        {format(day, "d")}
                       </div>
                     </div>
                   ))}
@@ -374,11 +398,14 @@ export default function SchedulePage() {
                               onClick={() => setSelectedEvent(event)}
                             >
                               <div className="font-medium truncate">
-                                {format(new Date(event.start), 'HH:mm')} -{' '}
-                                {format(new Date(event.end), 'HH:mm')}
+                                {format(new Date(event.start), "HH:mm")} -{" "}
+                                {format(new Date(event.end), "HH:mm")}
                               </div>
                               <div className="truncate opacity-80">
-                                {event.title.split(' - ').slice(1).join(' - ') || event.title}
+                                {event.title
+                                  .split(" - ")
+                                  .slice(1)
+                                  .join(" - ") || event.title}
                               </div>
                             </div>
                           ))}
@@ -394,7 +421,10 @@ export default function SchedulePage() {
           {/* No events message */}
           {!isLoadingEvents && events.length === 0 && (
             <div className="p-8 text-center border-t border-[var(--color-border-subtle)]">
-              <Calendar size={32} className="mx-auto mb-2 text-[var(--color-text-tertiary)]" />
+              <Calendar
+                size={32}
+                className="mx-auto mb-2 text-[var(--color-text-tertiary)]"
+              />
               <p className="text-[var(--color-text-secondary)]">
                 Brak zajec w tym tygodniu dla wybranej sali
               </p>
@@ -422,22 +452,33 @@ export default function SchedulePage() {
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-xl bg-[var(--color-accent-primary-muted)]">
-                  <Calendar size={20} className="text-[var(--color-accent-primary)]" />
+                  <Calendar
+                    size={20}
+                    className="text-[var(--color-accent-primary)]"
+                  />
                 </div>
                 <div>
-                  <div className="text-sm text-[var(--color-text-tertiary)]">Przedmiot</div>
+                  <div className="text-sm text-[var(--color-text-tertiary)]">
+                    Przedmiot
+                  </div>
                   <div className="font-medium text-[var(--color-text-primary)]">
-                    {selectedEvent.title.split(' - ').slice(1).join(' - ') || selectedEvent.title}
+                    {selectedEvent.title.split(" - ").slice(1).join(" - ") ||
+                      selectedEvent.title}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-xl bg-[var(--color-accent-secondary-muted)]">
-                  <Building2 size={20} className="text-[var(--color-accent-secondary)]" />
+                  <Building2
+                    size={20}
+                    className="text-[var(--color-accent-secondary)]"
+                  />
                 </div>
                 <div>
-                  <div className="text-sm text-[var(--color-text-tertiary)]">Sala</div>
+                  <div className="text-sm text-[var(--color-text-tertiary)]">
+                    Sala
+                  </div>
                   <div className="font-medium text-[var(--color-text-primary)]">
                     {selectedEvent.roomName} ({selectedEvent.building})
                   </div>
@@ -449,10 +490,14 @@ export default function SchedulePage() {
                   <Clock size={20} className="text-[var(--color-success)]" />
                 </div>
                 <div>
-                  <div className="text-sm text-[var(--color-text-tertiary)]">Czas</div>
+                  <div className="text-sm text-[var(--color-text-tertiary)]">
+                    Czas
+                  </div>
                   <div className="font-medium text-[var(--color-text-primary)]">
-                    {format(new Date(selectedEvent.start), 'PPp', { locale: pl })} -{' '}
-                    {format(new Date(selectedEvent.end), 'p', { locale: pl })}
+                    {format(new Date(selectedEvent.start), "PPp", {
+                      locale: pl,
+                    })}{" "}
+                    - {format(new Date(selectedEvent.end), "p", { locale: pl })}
                   </div>
                 </div>
               </div>
@@ -462,7 +507,9 @@ export default function SchedulePage() {
                   <User size={20} className="text-[var(--color-warning)]" />
                 </div>
                 <div>
-                  <div className="text-sm text-[var(--color-text-tertiary)]">Prowadzacy</div>
+                  <div className="text-sm text-[var(--color-text-tertiary)]">
+                    Prowadzacy
+                  </div>
                   <div className="font-medium text-[var(--color-text-primary)]">
                     {selectedEvent.userName}
                   </div>
@@ -470,7 +517,11 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <Button variant="secondary" className="w-full mt-6" onClick={() => setSelectedEvent(null)}>
+            <Button
+              variant="secondary"
+              className="w-full mt-6"
+              onClick={() => setSelectedEvent(null)}
+            >
               Zamknij
             </Button>
           </Card>
@@ -479,7 +530,10 @@ export default function SchedulePage() {
 
       {/* Click outside to close dropdown */}
       {isDropdownOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsDropdownOpen(false)}
+        />
       )}
     </div>
   );
