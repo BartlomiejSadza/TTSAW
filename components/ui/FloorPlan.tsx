@@ -78,15 +78,6 @@ export default function FloorPlan({ floor, rooms, onRoomClick, selectedRoomId }:
           }}
         />
 
-        {/* Courtyard in the center */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-40">
-          <div className="w-full h-full rounded-2xl bg-[var(--color-courtyard)] border-2 border-dashed border-[var(--color-border-default)] flex items-center justify-center">
-            <span className="text-[var(--color-text-tertiary)] text-sm font-medium">
-              Dziedziniec
-            </span>
-          </div>
-        </div>
-
         {/* Render rooms */}
         {floorRooms.map((room, index) => {
           const position = positions[index];
